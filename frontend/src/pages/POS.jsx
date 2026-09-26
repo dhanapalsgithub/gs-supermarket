@@ -115,16 +115,16 @@ export default function POS() {
     // First try local match
     const local = products.find((p) => p.barcode === code);
     if (local) { addToCart(local); setQuery(""); return; }
-    try {
-      const p = await fetchByBarcode(code);
-      addToCart(p); setQuery("");
-    } catch {
-      // If not barcode → keep as search filter
-      // Optionally auto-add first filtered result
-      const first = filtered[0];
-      if (first) { addToCart(first); setQuery(""); return; }
-      toast.error("Product not found");
+    // Only hit barcode endpoint for numeric codes to avoid noisy 404s
+    if (/^\d{3,}$/.test(code)) {
+      try {
+        const p = await fetchByBarcode(code);
+        addToCart(p); setQuery(""); return;
+      } catch { /* fall through to search */ }
     }
+    const first = filtered[0];
+    if (first) { addToCart(first); setQuery(""); return; }
+    toast.error("Product not found");
   };
 
   const openPayment = () => {
