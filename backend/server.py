@@ -72,9 +72,15 @@ async def get_current_user(request: Request) -> dict:
     return user
 
 
-async def require_admin(user: dict = Depends(get_current_user)) -> dict:
-    if user.get("role") != "admin":
-        raise HTTPException(status_code=403, detail="Admin only")
+async def require_owner(user: dict = Depends(get_current_user)) -> dict:
+    if user.get("role") != "owner":
+        raise HTTPException(status_code=403, detail="Owner only")
+    return user
+
+
+async def require_staff(user: dict = Depends(get_current_user)) -> dict:
+    if user.get("role") not in ("owner", "cashier"):
+        raise HTTPException(status_code=403, detail="Staff only")
     return user
 
 
@@ -288,14 +294,14 @@ async def get_by_barcode(barcode: str):
 
 
 @api.post("/products")
-async def create_product(payload: ProductCreate, _: dict = Depends(require_admin)):
+async def create_product(payload: ProductCreate, _: dict = Depends(require_owner)):
     prod = Product(**payload.model_dump())
     await db.products.insert_one(prod.model_dump())
     return prod
 
 
 @api.put("/products/{pid}")
-async def update_product(pid: str, payload: ProductUpdate, _: dict = Depends(require_admin)):
+async def update_product(pid: str, payload: ProductUpdate, _: dict = Depends(require_owner)):
     updates = {k: v for k, v in payload.model_dump().items() if v is not None}
     if updates:
         await db.products.update_one({"id": pid}, {"$set": updates})
@@ -306,7 +312,7 @@ async def update_product(pid: str, payload: ProductUpdate, _: dict = Depends(req
 
 
 @api.delete("/products/{pid}")
-async def delete_product(pid: str, _: dict = Depends(require_admin)):
+async def delete_product(pid: str, _: dict = Depends(require_owner)):
     r = await db.products.delete_one({"id": pid})
     return {"deleted": r.deleted_count}
 
@@ -317,7 +323,7 @@ async def list_categories():
 
 
 @api.post("/products/import")
-async def import_products(file: UploadFile = File(...), _: dict = Depends(require_admin)):
+async def import_products(file: UploadFile = File(...), _: dict = Depends(require_owner)):
     """Import CSV with columns: name, category, price, stock, barcode, unit"""
     content = (await file.read()).decode("utf-8", errors="ignore")
     reader = csv.DictReader(io.StringIO(content))
@@ -415,8 +421,8 @@ async def list_orders(request: Request, mine: bool = False, limit: int = 200):
             raise HTTPException(status_code=401, detail="Login required")
         query["user_id"] = curr["id"]
     else:
-        if not curr or curr.get("role") != "admin":
-            raise HTTPException(status_code=403, detail="Admin only")
+        if not curr or curr.get("role") not in ("owner", "cashier"):
+            raise HTTPException(status_code=403, detail="Staff only")
     docs = await db.orders.find(query, {"_id": 0}).sort("created_at", -1).to_list(limit)
     return docs
 
@@ -426,13 +432,13 @@ async def get_order(oid: str, user: dict = Depends(get_current_user)):
     doc = await db.orders.find_one({"id": oid}, {"_id": 0})
     if not doc:
         raise HTTPException(status_code=404, detail="Not found")
-    if user.get("role") != "admin" and doc.get("user_id") != user["id"]:
+    if user.get("role") not in ("owner", "cashier") and doc.get("user_id") != user["id"]:
         raise HTTPException(status_code=403, detail="Forbidden")
     return doc
 
 
 @api.patch("/orders/{oid}/status")
-async def update_order_status(oid: str, payload: OrderStatusUpdate, _: dict = Depends(require_admin)):
+async def update_order_status(oid: str, payload: OrderStatusUpdate, _: dict = Depends(require_owner)):
     doc = await db.orders.find_one({"id": oid})
     if not doc:
         raise HTTPException(status_code=404, detail="Not found")
@@ -469,7 +475,7 @@ async def read_settings():
 
 
 @api.put("/settings")
-async def write_settings(payload: SettingsUpdate, _: dict = Depends(require_admin)):
+async def write_settings(payload: SettingsUpdate, _: dict = Depends(require_owner)):
     updates = {k: v for k, v in payload.model_dump().items() if v is not None}
     updates["updated_at"] = now_iso()
     await db.settings.update_one({"id": SETTINGS_ID}, {"$set": updates}, upsert=True)
@@ -520,7 +526,7 @@ async def stats_summary():
 
 
 @api.get("/stats/report")
-async def stats_report(_: dict = Depends(require_admin)):
+async def stats_report(_: dict = Depends(require_owner)):
     """Today vs yesterday hourly + top 5 selling products"""
     now = datetime.now(timezone.utc)
     today_start = datetime(now.year, now.month, now.day, tzinfo=timezone.utc)
@@ -596,19 +602,131 @@ async def _startup():
                 logger.info(f"Seeded {len(docs)} products")
         except Exception as e:
             logger.warning(f"Seed skipped: {e}")
-    # seed admin
-    admin_email = os.environ.get("ADMIN_EMAIL", "admin@example.com").lower()
-    admin_password = os.environ.get("ADMIN_PASSWORD", "admin123")
-    existing = await db.users.find_one({"email": admin_email})
+    # seed / migrate owner (was 'admin' role)
+    owner_email = os.environ.get("ADMIN_EMAIL", "admin@example.com").lower()
+    owner_password = os.environ.get("ADMIN_PASSWORD", "admin123")
+    # migrate any legacy admin role → owner
+    await db.users.update_many({"role": "admin"}, {"$set": {"role": "owner"}})
+    existing = await db.users.find_one({"email": owner_email})
     if not existing:
         await db.users.insert_one({
-            "id": str(uuid.uuid4()), "email": admin_email, "password_hash": hash_pw(admin_password),
-            "name": "Admin", "phone": None, "address": None, "role": "admin", "created_at": now_iso(),
+            "id": str(uuid.uuid4()), "email": owner_email, "password_hash": hash_pw(owner_password),
+            "name": "GS Owner", "phone": None, "address": None, "role": "owner", "created_at": now_iso(),
         })
-        logger.info(f"Seeded admin {admin_email}")
-    elif not verify_pw(admin_password, existing["password_hash"]):
-        await db.users.update_one({"email": admin_email}, {"$set": {"password_hash": hash_pw(admin_password), "role": "admin"}})
-        logger.info("Admin password refreshed")
+        logger.info(f"Seeded owner {owner_email}")
+    elif not verify_pw(owner_password, existing["password_hash"]):
+        await db.users.update_one({"email": owner_email}, {"$set": {"password_hash": hash_pw(owner_password), "role": "owner"}})
+        logger.info("Owner password refreshed")
+    elif existing.get("role") != "owner":
+        await db.users.update_one({"email": owner_email}, {"$set": {"role": "owner"}})
+
+    # seed default cashier
+    cashier_email = "cashier@gs.com"
+    if not await db.users.find_one({"email": cashier_email}):
+        await db.users.insert_one({
+            "id": str(uuid.uuid4()), "email": cashier_email, "password_hash": hash_pw("Cashier@123"),
+            "name": "Ravi (Cashier)", "phone": None, "address": None, "role": "cashier", "created_at": now_iso(),
+        })
+        logger.info("Seeded cashier cashier@gs.com")
+
+    # seed dummy customers + orders + wishlist (10 each) if none yet
+    try:
+        await _seed_dummy_dataset()
+    except Exception as e:
+        logger.warning(f"Dummy seed skipped: {e}")
+
+
+async def _seed_dummy_dataset():
+    """Idempotent: creates ~10 test customers, 10 orders, 10 wishlist items if none exist."""
+    import random
+    if await db.users.count_documents({"role": "user"}) >= 10 and await db.orders.count_documents({}) >= 10:
+        return
+    names = [
+        ("Aarav Sharma", "aarav@example.com", "9812345601", "12 MG Road, Bengaluru"),
+        ("Priya Iyer", "priya@example.com", "9812345602", "24 Anna Nagar, Chennai"),
+        ("Rohan Verma", "rohan@example.com", "9812345603", "88 Salt Lake, Kolkata"),
+        ("Ananya Nair", "ananya@example.com", "9812345604", "31 Marine Drive, Mumbai"),
+        ("Kabir Singh", "kabir@example.com", "9812345605", "7 Connaught Place, Delhi"),
+        ("Meera Reddy", "meera@example.com", "9812345606", "45 Jubilee Hills, Hyderabad"),
+        ("Aditya Rao", "aditya@example.com", "9812345607", "9 Koregaon Park, Pune"),
+        ("Isha Kapoor", "isha@example.com", "9812345608", "63 Sector 17, Chandigarh"),
+        ("Vihaan Das", "vihaan@example.com", "9812345609", "18 Panjim Beach, Goa"),
+        ("Diya Menon", "diya@example.com", "9812345610", "22 Fort Kochi, Kerala"),
+    ]
+    user_ids = []
+    for name, em, ph, addr in names:
+        existing = await db.users.find_one({"email": em})
+        if existing:
+            user_ids.append(existing["id"]); continue
+        uid = str(uuid.uuid4())
+        await db.users.insert_one({
+            "id": uid, "email": em, "password_hash": hash_pw("Demo@1234"),
+            "name": name, "phone": ph, "address": addr, "role": "user", "created_at": now_iso(),
+        })
+        user_ids.append(uid)
+
+    products = await db.products.find({}, {"_id": 0}).limit(30).to_list(30)
+    if not products:
+        return
+
+    statuses = [
+        ("DELIVERED", "PAID", "POS", "CASH"),
+        ("DELIVERED", "PAID", "ONLINE", "UPI"),
+        ("SHIPPED", "PAID", "ONLINE", "UPI"),
+        ("SHIPPED", "UNPAID", "ONLINE", "COD"),
+        ("CONFIRMED", "PAID", "POS", "CARD"),
+        ("PENDING", "UNPAID", "ONLINE", "COD"),
+        ("DELIVERED", "PAID", "POS", "UPI"),
+        ("CONFIRMED", "PAID", "ONLINE", "UPI"),
+        ("PENDING", "PAID", "ONLINE", "UPI"),
+        ("DELIVERED", "PAID", "POS", "CASH"),
+    ]
+
+    existing_orders = await db.orders.count_documents({})
+    to_create = max(0, 10 - existing_orders)
+    now = datetime.now(timezone.utc)
+    for i in range(to_create):
+        u_idx = i % len(user_ids)
+        st_o, st_p, channel, method = statuses[i]
+        picks = random.sample(products, k=min(3, len(products)))
+        items = []
+        subtotal = 0
+        for p in picks:
+            q = random.randint(1, 3)
+            sub = round(p["price"] * q, 2)
+            items.append({"product_id": p["id"], "name": p["name"], "price": p["price"], "quantity": q, "subtotal": sub})
+            subtotal += sub
+        subtotal = round(subtotal, 2)
+        tax = round(subtotal * 0.05, 2)
+        total = round(subtotal + tax, 2)
+        created = now - timedelta(hours=i * 3)
+        doc = {
+            "id": str(uuid.uuid4()),
+            "receipt_no": gen_receipt_no(),
+            "user_id": None if channel == "POS" else user_ids[u_idx],
+            "items": items,
+            "subtotal": subtotal, "tax_rate": 0.05, "tax_amount": tax, "discount": 0, "total": total,
+            "payment_method": method, "amount_paid": total if st_p == "PAID" else 0,
+            "change_due": 0,
+            "customer_name": names[u_idx][0], "customer_phone": names[u_idx][2],
+            "delivery_address": names[u_idx][3] if channel == "ONLINE" else None,
+            "channel": channel, "cashier": "Ravi (Cashier)" if channel == "POS" else None,
+            "order_status": st_o, "payment_status": st_p,
+            "status_history": [{"at": created.isoformat(), "order_status": st_o, "payment_status": st_p}],
+            "created_at": created.isoformat(),
+        }
+        await db.orders.insert_one(doc)
+
+    # wishlist: attach 1 product to each dummy user (10 items)
+    if await db.wishlist.count_documents({}) < 10:
+        for i, uid in enumerate(user_ids):
+            prod = products[i % len(products)]
+            existing = await db.wishlist.find_one({"user_id": uid, "product_id": prod["id"]})
+            if not existing:
+                await db.wishlist.insert_one({
+                    "id": str(uuid.uuid4()), "user_id": uid, "product_id": prod["id"], "added_at": now_iso(),
+                })
+    logger.info("Seeded dummy customers, orders, wishlist")
 
 
 @app.on_event("shutdown")

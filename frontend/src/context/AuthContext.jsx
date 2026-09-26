@@ -32,7 +32,14 @@ export function AuthProvider({ children }) {
     setUser(null);
   };
 
-  const value = { user, setUser, loading, login, register, logout, isAdmin: user?.role === "admin" };
+  const value = {
+    user, setUser, loading, login, register, logout,
+    role: user?.role || null,
+    isOwner: user?.role === "owner",
+    isCashier: user?.role === "cashier",
+    isCustomer: user?.role === "user",
+    isStaff: user?.role === "owner" || user?.role === "cashier",
+  };
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 

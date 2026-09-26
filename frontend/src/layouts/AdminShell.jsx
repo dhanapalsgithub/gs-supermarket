@@ -5,16 +5,20 @@ import GSLogo from "../components/GSLogo";
 import Footer from "../components/Footer";
 
 export default function AdminShell() {
-  const { user, logout } = useAuth();
+  const { user, logout, isOwner } = useAuth();
   const nav = useNavigate();
 
-  const links = [
-    { to: "/admin/pos", icon: LayoutGrid, label: "POS", tid: "admin-nav-pos" },
-    { to: "/admin/orders", icon: ClipboardList, label: "Orders", tid: "admin-nav-orders" },
-    { to: "/admin/reports", icon: BarChart3, label: "Reports", tid: "admin-nav-reports" },
-    { to: "/admin/inventory", icon: Boxes, label: "Inventory", tid: "admin-nav-inventory" },
-    { to: "/admin/settings", icon: Settings, label: "Settings", tid: "admin-nav-settings" },
+  const allLinks = [
+    { to: "/admin/pos", icon: LayoutGrid, label: "POS", tid: "admin-nav-pos", roles: ["owner", "cashier"] },
+    { to: "/admin/orders", icon: ClipboardList, label: "Orders", tid: "admin-nav-orders", roles: ["owner"] },
+    { to: "/admin/reports", icon: BarChart3, label: "Reports", tid: "admin-nav-reports", roles: ["owner"] },
+    { to: "/admin/inventory", icon: Boxes, label: "Inventory", tid: "admin-nav-inventory", roles: ["owner"] },
+    { to: "/admin/settings", icon: Settings, label: "Settings", tid: "admin-nav-settings", roles: ["owner"] },
   ];
+  const links = allLinks.filter((l) => l.roles.includes(user?.role));
+
+  const roleLabel = isOwner ? "Owner" : "Cashier";
+  const roleTint = isOwner ? "from-indigo-500 to-violet-500" : "from-emerald-500 to-teal-500";
 
   return (
     <div className="min-h-screen flex">
@@ -23,7 +27,7 @@ export default function AdminShell() {
           <GSLogo size={36} />
           <div className="hidden md:block leading-tight">
             <div className="text-[9px] uppercase tracking-widest text-slate-500 font-semibold">R I Billing Pro</div>
-            <div className="text-sm font-extrabold tracking-tight">GS Admin</div>
+            <div className="text-sm font-extrabold tracking-tight">GS <span className={`bg-gradient-to-r ${roleTint} bg-clip-text text-transparent`}>{roleLabel}</span></div>
           </div>
         </div>
         <nav className="flex-1 p-2 md:p-3 space-y-1">

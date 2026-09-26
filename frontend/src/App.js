@@ -41,14 +41,14 @@ function App() {
               <Route path="/account" element={<ProtectedRoute><Account /></ProtectedRoute>} />
             </Route>
 
-            {/* Admin routes */}
-            <Route element={<ProtectedRoute adminOnly><AdminShell /></ProtectedRoute>}>
+            {/* Admin / Staff routes */}
+            <Route element={<ProtectedRoute staffOnly><AdminShell /></ProtectedRoute>}>
               <Route path="/admin" element={<Navigate to="/admin/pos" replace />} />
               <Route path="/admin/pos" element={<POS />} />
-              <Route path="/admin/orders" element={<AdminOrders />} />
-              <Route path="/admin/reports" element={<Reports />} />
-              <Route path="/admin/inventory" element={<Inventory />} />
-              <Route path="/admin/settings" element={<Settings />} />
+              <Route path="/admin/orders" element={<ProtectedRoute ownerOnly><AdminOrders /></ProtectedRoute>} />
+              <Route path="/admin/reports" element={<ProtectedRoute ownerOnly><Reports /></ProtectedRoute>} />
+              <Route path="/admin/inventory" element={<ProtectedRoute ownerOnly><Inventory /></ProtectedRoute>} />
+              <Route path="/admin/settings" element={<ProtectedRoute ownerOnly><Settings /></ProtectedRoute>} />
             </Route>
 
             <Route path="*" element={<Navigate to="/" replace />} />

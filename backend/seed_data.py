@@ -1,4 +1,4 @@
-# Product seed data extracted from user's supermarket inventory PDF
+# Product seed data extracted from user's supermarket inventory PDF (+ 10 dummy additions)
 PRODUCTS = [
     # GROCERY - Rice / Dals / Grains
     {"name": "WHITE PEAS 500 GM", "category": "GROCERY", "price": 55.0, "stock": 25, "barcode": "174", "unit": "GM"},
@@ -17,8 +17,6 @@ PRODUCTS = [
     {"name": "CASHEW SPLIT 250 GM", "category": "GROCERY", "price": 350.0, "stock": 21, "barcode": "379", "unit": "GM"},
     {"name": "ALMOND 50 GM", "category": "GROCERY", "price": 90.0, "stock": 48, "barcode": "167", "unit": "GM"},
     {"name": "DRY GRAPES 100 GM", "category": "GROCERY", "price": 55.0, "stock": 46, "barcode": "139", "unit": "GM"},
-
-    # GROCERY - Spices / Masalas
     {"name": "CHILLI POWDER 100G", "category": "GROCERY", "price": 45.0, "stock": 13, "barcode": "8906132640027", "unit": "G"},
     {"name": "CORIANDER POWDER 100G", "category": "GROCERY", "price": 40.0, "stock": 10, "barcode": "8906132640010", "unit": "G"},
     {"name": "GARAM MASALA 50G", "category": "GROCERY", "price": 55.0, "stock": 23, "barcode": "8906002081813", "unit": "G"},
@@ -28,23 +26,17 @@ PRODUCTS = [
     {"name": "MUTTON MASALA 50G", "category": "GROCERY", "price": 55.0, "stock": 20, "barcode": "8906132640850", "unit": "G"},
     {"name": "AACHI BIRYANI MASALA 50G", "category": "GROCERY", "price": 45.0, "stock": 27, "barcode": "8906021120272", "unit": "G"},
     {"name": "CUMIN POWDER 50G", "category": "GROCERY", "price": 60.0, "stock": 22, "barcode": "8906002082216", "unit": "G"},
-
-    # GROCERY - Oils / Ghee
     {"name": "MR.GOLD GINGELLY OIL 500ML", "category": "GROCERY", "price": 285.0, "stock": 66, "barcode": "8908002396973", "unit": "ML"},
     {"name": "MR.GOLD GROUNDNUT OIL 500ML", "category": "GROCERY", "price": 195.0, "stock": 97, "barcode": "8908002396966", "unit": "ML"},
     {"name": "MR.GOLD MUSTARD OIL 500ML", "category": "GROCERY", "price": 165.0, "stock": 181, "barcode": "8906125670475", "unit": "ML"},
     {"name": "MR GOLD OIL 1L POUCH", "category": "GROCERY", "price": 165.0, "stock": 198, "barcode": "8908002396959", "unit": "L"},
     {"name": "GRB GHEE 200ML JAR", "category": "GROCERY", "price": 220.0, "stock": 61, "barcode": "8906010360085", "unit": "ML"},
     {"name": "GRB GHEE 100ML JAR", "category": "GROCERY", "price": 120.0, "stock": 82, "barcode": "8906010360382", "unit": "ML"},
-
-    # FOOD_PRODUCTS - Dairy
     {"name": "HATSUN CURD 500G", "category": "FOOD_PRODUCTS", "price": 45.0, "stock": 41, "barcode": "8904057395558", "unit": "G"},
     {"name": "HATSUN CURD 120G", "category": "FOOD_PRODUCTS", "price": 15.0, "stock": 9, "barcode": "8904057395503", "unit": "G"},
     {"name": "MILKY MIST BUTTER SALTED 100G", "category": "FOOD_PRODUCTS", "price": 55.0, "stock": 79, "barcode": "8904083300519", "unit": "G"},
     {"name": "MILKY MIST PANEER 200G", "category": "FOOD_PRODUCTS", "price": 95.0, "stock": 104, "barcode": "8904083300021", "unit": "G"},
     {"name": "MILKY MIST FRUIT YOGURT 100G", "category": "FOOD_PRODUCTS", "price": 25.0, "stock": 36, "barcode": "8904083302100", "unit": "G"},
-
-    # BEVERAGES
     {"name": "COKE 750ML", "category": "BEVERAGES", "price": 40.0, "stock": 17, "barcode": "8901764012914", "unit": "ML"},
     {"name": "COLA 2.25L", "category": "BEVERAGES", "price": 95.0, "stock": 80, "barcode": "8901764012907", "unit": "L"},
     {"name": "DIET COKE 300ML", "category": "BEVERAGES", "price": 40.0, "stock": 47, "barcode": "8901764061103", "unit": "ML"},
@@ -55,8 +47,6 @@ PRODUCTS = [
     {"name": "BRU INSTANT 50G", "category": "BEVERAGES", "price": 145.0, "stock": 125, "barcode": "8909106013872", "unit": "G"},
     {"name": "BOOST 200G", "category": "BEVERAGES", "price": 220.0, "stock": 56, "barcode": "8909106018327", "unit": "G"},
     {"name": "AVT GOLD CUP TEA 250G", "category": "BEVERAGES", "price": 155.0, "stock": 84, "barcode": "8902042163694", "unit": "G"},
-
-    # SNACKS
     {"name": "PRINGLES ORIGINAL 40G", "category": "SNACKS", "price": 99.0, "stock": 46, "barcode": "8886467124716", "unit": "G"},
     {"name": "PRINGLES CREAM & ONION 40G", "category": "SNACKS", "price": 99.0, "stock": 46, "barcode": "8886467124723", "unit": "G"},
     {"name": "PRINGLES CHEESE BURST 40G", "category": "SNACKS", "price": 99.0, "stock": 46, "barcode": "8886467131226", "unit": "G"},
@@ -69,8 +59,6 @@ PRODUCTS = [
     {"name": "HIDE & SEEK 33G", "category": "SNACKS", "price": 10.0, "stock": 85, "barcode": "8901719100369", "unit": "G"},
     {"name": "OM MURUGA MIXTURE", "category": "SNACKS", "price": 30.0, "stock": 8, "barcode": "8906125671403", "unit": "PC"},
     {"name": "CHEETOS MASALA BALLS", "category": "SNACKS", "price": 20.0, "stock": 99, "barcode": "8901491103435", "unit": "PC"},
-
-    # PERSONAL_CARE
     {"name": "HIMALAYA FACE WASH 100ML", "category": "PERSONAL_CARE", "price": 165.0, "stock": 99, "barcode": "8901138005955", "unit": "ML"},
     {"name": "HIMALAYA NEEM FACE GEL", "category": "PERSONAL_CARE", "price": 175.0, "stock": 75, "barcode": "8901138848460", "unit": "PC"},
     {"name": "HIMALAYA LEMON FACE WASH", "category": "PERSONAL_CARE", "price": 175.0, "stock": 82, "barcode": "8901138509217", "unit": "PC"},
@@ -82,8 +70,6 @@ PRODUCTS = [
     {"name": "CINTHOL LIME 100G", "category": "PERSONAL_CARE", "price": 45.0, "stock": 40, "barcode": "8901023010484", "unit": "G"},
     {"name": "MYSORE SANDAL SOAP 125G", "category": "PERSONAL_CARE", "price": 75.0, "stock": 58, "barcode": "8901287100211", "unit": "G"},
     {"name": "GARNIER COLOUR NATURAL BLACK", "category": "PERSONAL_CARE", "price": 240.0, "stock": 80, "barcode": "8901526204731", "unit": "PC"},
-
-    # HOME_CLEANING
     {"name": "UJALA 250ML", "category": "HOME_CLEANING", "price": 55.0, "stock": 72, "barcode": "8902102194934", "unit": "ML"},
     {"name": "ARASAN DETERGENT 250G", "category": "HOME_CLEANING", "price": 40.0, "stock": 30, "barcode": "8908000674028", "unit": "G"},
     {"name": "GARBAGE BAG SMALL", "category": "HOME_CLEANING", "price": 30.0, "stock": 30, "barcode": "289", "unit": "PC"},
@@ -91,21 +77,27 @@ PRODUCTS = [
     {"name": "GARBAGE BAG BIG", "category": "HOME_CLEANING", "price": 55.0, "stock": 40, "barcode": "292", "unit": "PC"},
     {"name": "STEEL SCRUBBER", "category": "HOME_CLEANING", "price": 15.0, "stock": 51, "barcode": "113", "unit": "PC"},
     {"name": "NAKSHATRA AGARBATTI RS 10", "category": "HOME_CLEANING", "price": 10.0, "stock": 8, "barcode": "8906125671816", "unit": "PC"},
-
-    # STATIONERY
     {"name": "CLASSMATE NOTEBOOK", "category": "STATIONERY", "price": 60.0, "stock": 15, "barcode": "8902519002082", "unit": "PC"},
     {"name": "CLASSMATE NOTE 4 LINES", "category": "STATIONERY", "price": 65.0, "stock": 15, "barcode": "8902519010032", "unit": "PC"},
     {"name": "DRAWING NOTEBOOK", "category": "STATIONERY", "price": 35.0, "stock": 22, "barcode": "8902519001931", "unit": "PC"},
     {"name": "GEL PEN", "category": "STATIONERY", "price": 10.0, "stock": 90, "barcode": "8901765118202", "unit": "PC"},
     {"name": "OCTANE GEOMETRY BOX", "category": "STATIONERY", "price": 125.0, "stock": 68, "barcode": "8903183100548", "unit": "PC"},
     {"name": "SCRAP BOOK", "category": "STATIONERY", "price": 45.0, "stock": 35, "barcode": "8902519012296", "unit": "PC"},
-
-    # HEALTH_CARE
     {"name": "GOOD KNIGHT GREEN SHAKTHI", "category": "HEALTH_CARE", "price": 85.0, "stock": 36, "barcode": "8901023017254", "unit": "PC"},
     {"name": "GOOD KNIGHT COIL", "category": "HEALTH_CARE", "price": 30.0, "stock": 37, "barcode": "8901023030314", "unit": "PC"},
     {"name": "ALL OUT ULTRA REFILL 45ML", "category": "HEALTH_CARE", "price": 80.0, "stock": 67, "barcode": "8906006430419", "unit": "ML"},
-
-    # ADHESIVES
     {"name": "FEVIKWIK", "category": "ADHESIVES", "price": 15.0, "stock": 40, "barcode": "8901860010005", "unit": "PC"},
     {"name": "FEVIKWIK GEL", "category": "ADHESIVES", "price": 25.0, "stock": 30, "barcode": "8901860010272", "unit": "PC"},
+
+    # --- 10 new dummy products (iteration 4) ---
+    {"name": "GS PREMIUM BASMATI 5KG", "category": "GROCERY", "price": 675.0, "stock": 40, "barcode": "GS0001", "unit": "KG"},
+    {"name": "GS ORGANIC HONEY 500G", "category": "GROCERY", "price": 320.0, "stock": 25, "barcode": "GS0002", "unit": "G"},
+    {"name": "GS COLD PRESSED COCONUT OIL 1L", "category": "GROCERY", "price": 425.0, "stock": 32, "barcode": "GS0003", "unit": "L"},
+    {"name": "AMUL BUTTER 100G", "category": "FOOD_PRODUCTS", "price": 60.0, "stock": 90, "barcode": "GS0004", "unit": "G"},
+    {"name": "AMUL PANEER 200G", "category": "FOOD_PRODUCTS", "price": 95.0, "stock": 45, "barcode": "GS0005", "unit": "G"},
+    {"name": "LAYS CLASSIC SALTED 52G", "category": "SNACKS", "price": 20.0, "stock": 120, "barcode": "GS0006", "unit": "G"},
+    {"name": "BINGO MAD ANGLES 66G", "category": "SNACKS", "price": 20.0, "stock": 85, "barcode": "GS0007", "unit": "G"},
+    {"name": "REAL MIXED FRUIT JUICE 1L", "category": "BEVERAGES", "price": 130.0, "stock": 60, "barcode": "GS0008", "unit": "L"},
+    {"name": "COLGATE STRONG TEETH 200G", "category": "PERSONAL_CARE", "price": 115.0, "stock": 70, "barcode": "GS0009", "unit": "G"},
+    {"name": "DETTOL LIQUID HANDWASH 200ML", "category": "PERSONAL_CARE", "price": 89.0, "stock": 55, "barcode": "GS0010", "unit": "ML"},
 ]

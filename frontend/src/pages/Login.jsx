@@ -20,7 +20,8 @@ export default function Login() {
     try {
       const u = await login(email, password);
       toast.success(`Welcome back, ${u.name}`);
-      nav(u.role === "admin" ? "/admin/pos" : (loc.state?.from || "/shop"));
+      const isStaff = u.role === "owner" || u.role === "cashier";
+      nav(isStaff ? "/admin/pos" : (loc.state?.from || "/shop"));
     } catch (err) {
       toast.error(err.response?.data?.detail || "Login failed");
     } finally { setBusy(false); }
@@ -77,8 +78,10 @@ export default function Login() {
               Create one
             </Link>
           </div>
-          <div className="mt-4 text-[11px] text-center text-slate-400">
-            Admin demo: smallbiz743@gmail.com / Admin@123
+          <div className="mt-4 text-[11px] text-center text-slate-400 space-y-1">
+            <div>Owner: <span className="font-mono-num">smallbiz743@gmail.com / Admin@123</span></div>
+            <div>Cashier: <span className="font-mono-num">cashier@gs.com / Cashier@123</span></div>
+            <div>Customer: create via <Link to="/register" className="text-indigo-600 underline">signup</Link></div>
           </div>
         </div>
       </div>

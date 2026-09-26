@@ -5,7 +5,7 @@ import GSLogo, { GSLogoWithText } from "../components/GSLogo";
 import Footer from "../components/Footer";
 
 export default function UserShell() {
-  const { user, logout, isAdmin } = useAuth();
+  const { user, logout, isStaff } = useAuth();
   const { items } = useCart();
   const nav = useNavigate();
 
@@ -47,9 +47,9 @@ export default function UserShell() {
         </nav>
 
         <div className="flex items-center gap-2">
-          {isAdmin && (
+          {isStaff && (
             <Link to="/admin/pos" className="chip chip-off hidden md:inline-flex" data-testid="go-admin">
-              Admin
+              {user?.role === "owner" ? "Owner" : "Cashier"} Console
             </Link>
           )}
           {user ? (

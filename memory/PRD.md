@@ -55,6 +55,23 @@ Full-stack retail platform combining an in-store POS (with Milestone Y50 Bluetoo
 - Backend rolled back to local MongoDB (`test_database`) to keep app live
 - Action: user must add `34.170.12.145/32` (or `0.0.0.0/0`) in Atlas → Security → Network Access, then say "done" and I'll flip MONGO_URL + migrate data
 
+## Implemented (2026-10, iteration 4 — RBAC + dummy data)
+- **3-tier RBAC** enforced end-to-end (backend `require_owner` / `require_staff` deps + frontend `ProtectedRoute` with `staffOnly` / `ownerOnly` / `customerOnly`)
+  - **Owner**: full access — POS, Orders, Reports, Inventory, Settings, product CRUD, status/payment updates
+  - **Cashier**: log in to admin console with POS-only sidebar; can scan barcodes, add to cart, create receipts; **403** on product create/update/delete, status update, reports, settings
+  - **Public user (`user`)**: shop / cart / wishlist / checkout / own orders / account only; **403** on any admin API
+- Legacy role `admin` auto-migrated to `owner` on startup (idempotent)
+- Seeded default staff:
+  - Owner: `smallbiz743@gmail.com / Admin@123`
+  - Cashier: `cashier@gs.com / Cashier@123`
+- **10 dummy records per menu** seeded idempotently:
+  - 10 new products (barcodes `GS0001`–`GS0010`, incl. GS Premium Basmati, GS Organic Honey, Amul Butter/Paneer, Lays, Bingo, Real, Colgate, Dettol) — total ≈97
+  - 10 customer accounts (Aarav, Priya, Rohan, Ananya, Kabir, Meera, Aditya, Isha, Vihaan, Diya — all `Demo@1234`)
+  - 10 orders across statuses (PENDING/CONFIRMED/SHIPPED/DELIVERED × POS/ONLINE × CASH/UPI/CARD/COD)
+  - 10 wishlist items (one per dummy customer)
+- Admin shell: role-aware sidebar (POS-only for cashier), role badge in header (Owner=indigo, Cashier=emerald)
+- Login page: shows all three credential paths (owner, cashier, customer signup)
+
 ## Backlog / Next
 - P1: Real payment gateway (Stripe/Razorpay) toggle
 - P1: Order confirmation email (Resend integration)

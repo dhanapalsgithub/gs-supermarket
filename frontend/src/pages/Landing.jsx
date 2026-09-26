@@ -5,7 +5,7 @@ import GSLogo, { GSLogoWithText } from "../components/GSLogo";
 import Footer from "../components/Footer";
 
 export default function Landing() {
-  const { user, isAdmin } = useAuth();
+  const { user, isStaff } = useAuth();
   return (
     <div className="min-h-screen flex flex-col">
       <header className="px-6 md:px-12 py-6 flex items-center">
@@ -15,8 +15,8 @@ export default function Landing() {
         <div className="ml-auto flex items-center gap-2">
           {!user && <Link to="/login" data-testid="landing-login" className="chip chip-off">Sign In</Link>}
           {!user && <Link to="/register" data-testid="landing-register" className="chip chip-on">Create Account</Link>}
-          {user && !isAdmin && <Link to="/shop" data-testid="landing-shop" className="chip chip-on">Continue Shopping</Link>}
-          {isAdmin && <Link to="/admin/pos" data-testid="landing-admin" className="chip chip-on">Open Admin</Link>}
+          {user && !isStaff && <Link to="/shop" data-testid="landing-shop" className="chip chip-on">Continue Shopping</Link>}
+          {isStaff && <Link to="/admin/pos" data-testid="landing-admin" className="chip chip-on">Open Console</Link>}
         </div>
       </header>
 
