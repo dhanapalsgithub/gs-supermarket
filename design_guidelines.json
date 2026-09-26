@@ -1,0 +1,134 @@
+{
+  "project_name": "Supermarket POS Billing System",
+  "app_type": "dashboard / pos-app",
+  "archetype": "THE PERFORMANCE PRO & HIGH UTILITY POS",
+  "theme_strategy": "Light & Clean High-Contrast UI optimized for Cashier Workstations and Touchscreens with Dark Mode toggle",
+  "accent_color": {
+    "name": "Indigo",
+    "primary": "#4F46E5",
+    "primary_hover": "#4338CA",
+    "primary_light": "#EEF2FF",
+    "primary_dark": "#312E81",
+    "success_emerald": "#059669",
+    "warning_amber": "#D97706",
+    "danger_rose": "#E11D48"
+  },
+  "typography": {
+    "heading_font": "Outfit, system-ui, sans-serif",
+    "body_font": "Plus Jakarta Sans, system-ui, sans-serif",
+    "receipt_font": "JetBrains Mono, Courier, monospace",
+    "hierarchy": {
+      "h1_hero": "text-3xl font-bold tracking-tight",
+      "h2_section": "text-xl font-semibold tracking-tight",
+      "h3_card": "text-lg font-medium",
+      "body_regular": "text-sm font-normal leading-relaxed",
+      "small_label": "text-xs font-semibold uppercase tracking-wider",
+      "price_highlight": "text-2xl font-bold tracking-tight text-indigo-700 dark:text-indigo-400 font-mono"
+    }
+  },
+  "spacing_and_layout": {
+    "grid_structure": "Two-column POS master layout: Left panel (Product Search, Category Pills, Product Grid) taking 60-65% width; Right panel (Customer Bar, Live Cart Table, Discount/Tax Breakdown, Payment Selectors, Action Bar) taking 35-40% width.",
+    "touch_targets": "Minimum tap area 44px x 44px for high-speed cashier interaction",
+    "padding_rules": "Generous inner padding (p-4 to p-6) for cart containers to avoid text collisions"
+  },
+  "key_features_and_views": [
+    {
+      "name": "BarcodeInputHeader",
+      "description": "Auto-focused barcode input field at top of screen supporting instant scan with enter key, simulated barcode beep sound, keyboard shortcut hints (F2/Slash), and manual product lookup trigger."
+    },
+    {
+      "name": "ProductCatalogGrid",
+      "description": "Category filter pills (All, Fruits & Veg, Dairy & Bakery, Snacks & Beverages, Staples, Household), search bar with clear button, grid of product cards showing high quality thumbnail, product name, price, stock counter badge, barcode tag, and tap-to-add action."
+    },
+    {
+      "name": "LiveBillingCart",
+      "description": "Interactive billing panel with Customer Info Capture (Name, Phone, Member Discount), scanned items list with quantity steppers (+, -, item remove), subtotal, item discount, GST/Tax calculation, and Grand Total display."
+    },
+    {
+      "name": "PaymentAndCheckout",
+      "description": "Action toolbar supporting Cash payment (with tendered cash input and live change calculator), UPI/QR payment (modal with dynamic mock QR code), Card payment chip simulation, Hold Cart option, and prominent 'Print Bill / Checkout' primary button."
+    },
+    {
+      "name": "BluetoothThermalPrinterModal",
+      "description": "Status badge ('Connected to Thermal Printer - 58mm') with toggle modal to manage printer baud rate, paper width (58mm/80mm), disconnect simulation, and test receipt print trigger."
+    },
+    {
+      "name": "ThermalReceiptView",
+      "description": "Authentic monochrome 58mm thermal receipt modal simulation complete with paper tear effect, store header, tax registration number, timestamp, itemized list, subtotal/tax summary, barcode, and print/close actions."
+    },
+    {
+      "name": "SalesHistoryLogPage",
+      "description": "Comprehensive sales drawer showing daily receipts, cashier details, payment mode, totals, status (Completed/Refunded), and receipt re-print / order void options."
+    },
+    {
+      "name": "AdminProductManagementModal",
+      "description": "Modal interface for adding new items, editing existing stock levels, setting prices, updating barcode SKUs, and toggling active inventory status."
+    }
+  ],
+  "image_urls": {
+    "categories": [
+      {
+        "category_name": "Fruits & Vegetables",
+        "url": "https://images.unsplash.com/photo-1590779033100-9f60a05a013d?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMjV8MHwxfHNlYXJjaHwzfHxmcmVzaCUyMG9yZ2FuaWMlMjB2ZWdldGFibGVzJTIwZnJ1aXQlMjBncm9jZXJ5fGVufDB8fHx8MTc5MDQyMTk4N3ww&ixlib=rb-4.1.0&q=85",
+        "description": "Assorted fresh organic vegetables and fruits"
+      },
+      {
+        "category_name": "Supermarket Grocery Shelf",
+        "url": "https://images.unsplash.com/photo-1601600576337-c1d8a0d1373c?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzB8MHwxfHNlYXJjaHwzfHxzdXBlcm1hcmtldCUyMGdyb2NlcnklMjBpdGVtcyUyMHByb2R1Y3R8ZW58MHx8fHwxNzkwNDIxOTg3fDA&ixlib=rb-4.1.0&q=85",
+        "description": "Supermarket product display aisle"
+      },
+      {
+        "category_name": "Dairy & Beverage",
+        "url": "https://images.unsplash.com/photo-1634141510639-d691d86f47be?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA2OTV8MHwxfHNlYXJjaHwxfHxkYWlyeSUyMG1pbGslMjBqdWljZSUyMGJldmVyYWdlJTIwYmFrZXJ5JTIwcHJvZHVjdHxlbnwwfHx8fDE3OTA0MjE5OTR8MA&ixlib=rb-4.1.0&q=85",
+        "description": "Fresh dairy milk bottle and bakery goods"
+      },
+      {
+        "category_name": "Store Goods & Pantry",
+        "url": "https://images.unsplash.com/photo-1543168256-418811576931?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzB8MHwxfHNlYXJjaHw0fHxzdXBlcm1hcmtldCUyMGdyb2NlcnklMjBpdGVtcyUyMHByb2R1Y3R8ZW58MHx8fHwxNzkwNDIxOTg3fDA&ixlib=rb-4.1.0&q=85",
+        "description": "Pantry items and packaged goods"
+      }
+    ]
+  },
+  "testing_requirements": {
+    "rule": "Every single interactive element, input, filter button, table row, tab, modal trigger, payment option, and numerical counter MUST have a distinct data-testid attribute in kebab-case format.",
+    "key_test_ids": [
+      "barcode-search-input",
+      "barcode-scan-submit-button",
+      "category-filter-all",
+      "category-filter-fruits",
+      "product-card-add-button",
+      "cart-item-qty-increase",
+      "cart-item-qty-decrease",
+      "cart-item-remove-button",
+      "customer-name-input",
+      "customer-phone-input",
+      "cart-subtotal-display",
+      "cart-tax-display",
+      "cart-discount-input",
+      "cart-grand-total-display",
+      "payment-method-cash",
+      "payment-method-upi",
+      "payment-method-card",
+      "cash-tendered-input",
+      "print-bill-checkout-button",
+      "printer-status-indicator",
+      "printer-config-modal-toggle",
+      "sales-history-nav-button",
+      "admin-products-nav-button",
+      "receipt-modal-close-button",
+      "receipt-print-action-button"
+    ]
+  },
+  "instructions_to_main_agent": [
+    "Use standard React JS (.js / .jsx) components.",
+    "Implement lucide-react icons for clear status and quick actions.",
+    "Ensure the barcode input at the top auto-focuses on load and after scanning items.",
+    "Implement keyboard event listeners (e.g., Press 'Enter' in barcode field to scan; 'F2' or '/' to jump to search).",
+    "Provide rich mock default products (12-16 items with real prices, barcodes like 890123456701, stock quantities, categories, and Unsplash images).",
+    "Ensure live cart tax calculation (e.g. 5% or 12% GST) and discount applications work smoothly with live reactivity.",
+    "Simulate cash change calculation when Cash payment is selected.",
+    "Simulate Bluetooth thermal printer state connected/disconnected with toast alerts using sonner or toast component.",
+    "Include customer loyalty phone lookup to auto-apply member discounts.",
+    "Add full testid attributes to every component for end-to-end automation test validation."
+  ]
+}
