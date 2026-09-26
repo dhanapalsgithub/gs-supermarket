@@ -10,8 +10,8 @@ export default function AdminOrders() {
   const [orders, setOrders] = useState([]);
   const [filter, setFilter] = useState("ALL");
 
-  const load = () => fetchOrders().then(setOrders).catch(() => {});
-  useEffect(load, []);
+  const load = () => { fetchOrders().then(setOrders).catch(() => {}); };
+  useEffect(() => { load(); }, []);
 
   const setStatus = async (o, order_status) => {
     try { await updateOrderStatus(o.id, { order_status }); toast.success(`Marked ${order_status}`); load(); } catch { toast.error("Failed"); }

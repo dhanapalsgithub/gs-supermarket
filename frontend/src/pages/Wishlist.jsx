@@ -8,8 +8,8 @@ export default function Wishlist() {
   const [items, setItems] = useState([]);
   const { add } = useCart();
 
-  const load = () => fetchWishlist().then(setItems).catch(() => {});
-  useEffect(load, []);
+  const load = () => { fetchWishlist().then(setItems).catch(() => {}); };
+  useEffect(() => { load(); }, []);
 
   const remove = async (pid) => { await removeWishlist(pid); load(); };
   const addAll = () => { items.forEach((w) => add(w.product)); toast.success("Added to cart"); };

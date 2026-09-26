@@ -1,10 +1,17 @@
-"""Backend API tests for Supermarket POS."""
+"""Backend API tests for R I Billing Pro (Supermarket POS + E-commerce)."""
+import io
 import os
+import uuid
 import pytest
 import requests
+from dotenv import load_dotenv
 
-BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "https://store-cashier-pro.preview.emergentagent.com").rstrip("/")
+load_dotenv("/app/frontend/.env")
+BASE_URL = os.environ["REACT_APP_BACKEND_URL"].rstrip("/")
 API = f"{BASE_URL}/api"
+
+ADMIN_EMAIL = "smallbiz743@gmail.com"
+ADMIN_PASSWORD = "Admin@123"
 
 
 @pytest.fixture(scope="module")
@@ -12,141 +19,238 @@ def s():
     return requests.Session()
 
 
-# ---- Products ----
-def test_list_products(s):
-    r = s.get(f"{API}/products")
-    assert r.status_code == 200
-    data = r.json()
-    assert isinstance(data, list)
-    assert len(data) >= 80  # seeded 87
-    p = data[0]
-    for k in ["id", "name", "category", "price"]:
-        assert k in p
-
-
-def test_list_categories(s):
-    r = s.get(f"{API}/categories")
-    assert r.status_code == 200
-    cats = r.json()
-    assert isinstance(cats, list)
-    for expected in ["GROCERY", "SNACKS", "BEVERAGES", "PERSONAL_CARE"]:
-        assert expected in cats
-
-
-def test_barcode_lookup_himalaya(s):
-    r = s.get(f"{API}/products/barcode/8901138836108")
-    assert r.status_code == 200
-    d = r.json()
-    assert "HIMALAYA TOOTHPASTE 150G" in d["name"]
-    assert d["category"] == "PERSONAL_CARE"
-    assert d["price"] == 110.0
-
-
-def test_barcode_not_found(s):
-    r = s.get(f"{API}/products/barcode/NONEXISTENT999")
-    assert r.status_code == 404
-
-
-def test_search_query(s):
-    r = s.get(f"{API}/products", params={"q": "coke"})
-    assert r.status_code == 200
-    names = [p["name"].lower() for p in r.json()]
-    assert any("coke" in n for n in names)
-
-
-def test_category_filter(s):
-    r = s.get(f"{API}/products", params={"category": "BEVERAGES"})
-    assert r.status_code == 200
-    data = r.json()
-    assert len(data) > 0
-    assert all(p["category"] == "BEVERAGES" for p in data)
-
-
-def test_product_crud(s):
-    payload = {"name": "TEST_PRODUCT_XYZ", "category": "TEST_CAT", "price": 12.5, "stock": 5, "barcode": "TEST123", "unit": "PC"}
-    r = s.post(f"{API}/products", json=payload)
-    assert r.status_code == 200
-    p = r.json()
-    assert p["name"] == "TEST_PRODUCT_XYZ"
-    assert p["price"] == 12.5
-    pid = p["id"]
-
-    # Update
-    r = s.put(f"{API}/products/{pid}", json={"price": 15.0})
-    assert r.status_code == 200
-    assert r.json()["price"] == 15.0
-
-    # Verify persisted via search
-    r = s.get(f"{API}/products", params={"q": "TEST_PRODUCT_XYZ"})
-    assert any(x["id"] == pid and x["price"] == 15.0 for x in r.json())
-
-    # Delete
-    r = s.delete(f"{API}/products/{pid}")
-    assert r.status_code == 200
-    assert r.json()["deleted"] == 1
-
-
-# ---- Sales ----
-def test_create_sale_and_stock_decrement(s):
-    # Get a product
-    r = s.get(f"{API}/products/barcode/8901138836108")
-    prod = r.json()
-    initial_stock = prod["stock"]
-
-    sale_items = [{
-        "product_id": prod["id"],
-        "name": prod["name"],
-        "price": prod["price"],
-        "quantity": 2,
-        "subtotal": prod["price"] * 2,
-    }]
-    subtotal = prod["price"] * 2
-    tax_amt = round(subtotal * 0.05, 2)
-    total = subtotal + tax_amt
-    payload = {
-        "items": sale_items,
-        "subtotal": subtotal,
-        "tax_rate": 0.05,
-        "tax_amount": tax_amt,
-        "discount": 0,
-        "total": total,
-        "payment_method": "CASH",
-        "amount_paid": total,
-        "change_due": 0,
-        "customer_name": "TEST_CUST",
-        "customer_phone": "9999999999",
-    }
-    r = s.post(f"{API}/sales", json=payload)
+@pytest.fixture(scope="module")
+def admin_token(s):
+    r = s.post(f"{API}/auth/login", json={"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD})
     assert r.status_code == 200, r.text
-    sale = r.json()
-    assert sale["receipt_no"].startswith("RCP-")
-    assert sale["total"] == total
-    sale_id = sale["id"]
-
-    # Verify stock decremented
-    r = s.get(f"{API}/products/barcode/8901138836108")
-    assert r.json()["stock"] == initial_stock - 2
-
-    # Get sale by id
-    r = s.get(f"{API}/sales/{sale_id}")
-    assert r.status_code == 200
-    assert r.json()["receipt_no"] == sale["receipt_no"]
+    data = r.json()
+    assert data["user"]["role"] == "admin"
+    return data["token"]
 
 
-def test_list_sales_newest_first(s):
-    r = s.get(f"{API}/sales")
-    assert r.status_code == 200
-    sales = r.json()
-    assert isinstance(sales, list)
-    if len(sales) >= 2:
-        assert sales[0]["created_at"] >= sales[1]["created_at"]
+@pytest.fixture(scope="module")
+def admin_headers(admin_token):
+    return {"Authorization": f"Bearer {admin_token}"}
 
 
-def test_stats_summary(s):
-    r = s.get(f"{API}/stats/summary")
-    assert r.status_code == 200
-    d = r.json()
-    for k in ["total_products", "total_sales", "total_revenue"]:
-        assert k in d
-    assert d["total_products"] >= 80
-    assert d["total_sales"] >= 1
+@pytest.fixture(scope="module")
+def user_creds():
+    return {
+        "email": f"TEST_user_{uuid.uuid4().hex[:8]}@example.com",
+        "password": "Test@1234",
+        "name": "Test User",
+        "phone": "9999911111",
+        "address": "Test Addr",
+    }
+
+
+@pytest.fixture(scope="module")
+def user_token(s, user_creds):
+    r = s.post(f"{API}/auth/register", json=user_creds)
+    assert r.status_code == 200, r.text
+    data = r.json()
+    assert "token" in data
+    assert data["user"]["email"] == user_creds["email"].lower()
+    assert data["user"]["role"] == "user"
+    assert "_id" not in data["user"]
+    assert "password_hash" not in data["user"]
+    return data["token"]
+
+
+@pytest.fixture(scope="module")
+def user_headers(user_token):
+    return {"Authorization": f"Bearer {user_token}"}
+
+
+# ----- Auth -----
+class TestAuth:
+    def test_login_admin(self, admin_token):
+        assert admin_token
+
+    def test_login_invalid(self, s):
+        r = s.post(f"{API}/auth/login", json={"email": ADMIN_EMAIL, "password": "wrong"})
+        assert r.status_code == 401
+
+    def test_register_duplicate(self, s, user_creds, user_token):
+        r = s.post(f"{API}/auth/register", json=user_creds)
+        assert r.status_code == 400
+
+    def test_me(self, s, user_headers, user_creds):
+        r = s.get(f"{API}/auth/me", headers=user_headers)
+        assert r.status_code == 200
+        d = r.json()
+        assert d["email"] == user_creds["email"].lower()
+        assert "password_hash" not in d
+
+    def test_me_no_auth(self, s):
+        r = s.get(f"{API}/auth/me")
+        assert r.status_code == 401
+
+    def test_profile_update(self, s, user_headers):
+        r = s.put(f"{API}/auth/profile", headers=user_headers,
+                  json={"name": "Updated Name", "phone": "8888888888", "address": "New Addr 42"})
+        assert r.status_code == 200
+        assert r.json()["name"] == "Updated Name"
+        # verify persisted
+        r = s.get(f"{API}/auth/me", headers=user_headers)
+        assert r.json()["phone"] == "8888888888"
+
+
+# ----- Products -----
+class TestProducts:
+    def test_list_public(self, s):
+        r = s.get(f"{API}/products")
+        assert r.status_code == 200
+        assert isinstance(r.json(), list)
+
+    def test_create_without_auth_forbidden(self, s):
+        r = s.post(f"{API}/products", json={"name": "X", "category": "C", "price": 1})
+        assert r.status_code == 401
+
+    def test_create_with_user_forbidden(self, s, user_headers):
+        r = s.post(f"{API}/products", json={"name": "X", "category": "C", "price": 1}, headers=user_headers)
+        assert r.status_code == 403
+
+    def test_admin_crud(self, s, admin_headers):
+        payload = {"name": "TEST_PROD", "category": "TEST_CAT", "price": 20.0, "stock": 10, "barcode": f"TB{uuid.uuid4().hex[:6]}", "unit": "pcs"}
+        r = s.post(f"{API}/products", json=payload, headers=admin_headers)
+        assert r.status_code == 200
+        pid = r.json()["id"]
+        # update
+        r = s.put(f"{API}/products/{pid}", json={"price": 25.0}, headers=admin_headers)
+        assert r.status_code == 200 and r.json()["price"] == 25.0
+        # delete
+        r = s.delete(f"{API}/products/{pid}", headers=admin_headers)
+        assert r.status_code == 200 and r.json()["deleted"] == 1
+
+    def test_csv_import(self, s, admin_headers):
+        csv_data = "name,category,price,stock,barcode,unit\n"
+        bc = f"TCSV{uuid.uuid4().hex[:6]}"
+        csv_data += f"TEST_CSV_A,TESTIMP,10,5,{bc},pcs\n"
+        csv_data += "TEST_CSV_B,TESTIMP,20,3,,pcs\n"
+        files = {"file": ("t.csv", io.BytesIO(csv_data.encode()), "text/csv")}
+        r = s.post(f"{API}/products/import", files=files, headers=admin_headers)
+        assert r.status_code == 200, r.text
+        d = r.json()
+        assert d["created"] >= 2
+        assert set(["created", "updated", "errors"]).issubset(d.keys())
+
+
+# ----- Orders -----
+class TestOrders:
+    def _make_payload(self, prod, channel, method):
+        item = {"product_id": prod["id"], "name": prod["name"], "price": prod["price"], "quantity": 1, "subtotal": prod["price"]}
+        sub = prod["price"]
+        tax = round(sub * 0.05, 2)
+        return {
+            "items": [item], "subtotal": sub, "tax_rate": 0.05, "tax_amount": tax,
+            "discount": 0, "total": sub + tax, "payment_method": method,
+            "amount_paid": sub + tax, "change_due": 0, "channel": channel,
+            "customer_name": "T", "customer_phone": "9", "delivery_address": "addr",
+        }
+
+    def test_pos_creates_paid_confirmed(self, s, admin_headers):
+        prod = s.get(f"{API}/products").json()[0]
+        r = s.post(f"{API}/orders", json=self._make_payload(prod, "POS", "CASH"), headers=admin_headers)
+        assert r.status_code == 200
+        d = r.json()
+        assert d["order_status"] == "CONFIRMED"
+        assert d["payment_status"] == "PAID"
+        assert d["receipt_no"].startswith("RCP-")
+
+    def test_online_cod(self, s, user_headers):
+        prod = s.get(f"{API}/products").json()[0]
+        r = s.post(f"{API}/orders", json=self._make_payload(prod, "ONLINE", "COD"), headers=user_headers)
+        assert r.status_code == 200
+        d = r.json()
+        assert d["order_status"] == "PENDING"
+        assert d["payment_status"] == "UNPAID"
+        return d
+
+    def test_online_upi(self, s, user_headers):
+        prod = s.get(f"{API}/products").json()[0]
+        r = s.post(f"{API}/orders", json=self._make_payload(prod, "ONLINE", "UPI"), headers=user_headers)
+        assert r.status_code == 200
+        d = r.json()
+        assert d["order_status"] == "PENDING"
+        assert d["payment_status"] == "PAID"
+
+    def test_orders_mine_only(self, s, user_headers):
+        # ensure at least one user order
+        prod = s.get(f"{API}/products").json()[0]
+        s.post(f"{API}/orders", json=self._make_payload(prod, "ONLINE", "COD"), headers=user_headers)
+        r = s.get(f"{API}/orders?mine=true", headers=user_headers)
+        assert r.status_code == 200
+        orders = r.json()
+        assert len(orders) >= 1
+
+    def test_list_without_mine_non_admin_forbidden(self, s, user_headers):
+        r = s.get(f"{API}/orders", headers=user_headers)
+        assert r.status_code == 403
+
+    def test_list_without_mine_admin_ok(self, s, admin_headers):
+        r = s.get(f"{API}/orders", headers=admin_headers)
+        assert r.status_code == 200
+        assert isinstance(r.json(), list)
+
+    def test_status_update_flow(self, s, user_headers, admin_headers):
+        prod = s.get(f"{API}/products").json()[0]
+        r = s.post(f"{API}/orders", json=self._make_payload(prod, "ONLINE", "COD"), headers=user_headers)
+        oid = r.json()["id"]
+        # advance to CONFIRMED and PAID
+        r = s.patch(f"{API}/orders/{oid}/status", json={"order_status": "CONFIRMED", "payment_status": "PAID"}, headers=admin_headers)
+        assert r.status_code == 200
+        d = r.json()
+        assert d["order_status"] == "CONFIRMED" and d["payment_status"] == "PAID"
+        # user sees change
+        r = s.get(f"{API}/orders/{oid}", headers=user_headers)
+        assert r.status_code == 200
+        assert r.json()["order_status"] == "CONFIRMED"
+
+    def test_status_update_non_admin_forbidden(self, s, user_headers):
+        r = s.get(f"{API}/orders?mine=true", headers=user_headers)
+        if r.json():
+            oid = r.json()[0]["id"]
+            r = s.patch(f"{API}/orders/{oid}/status", json={"order_status": "SHIPPED"}, headers=user_headers)
+            assert r.status_code == 403
+
+
+# ----- Wishlist -----
+class TestWishlist:
+    def test_wishlist_crud(self, s, user_headers):
+        prod = s.get(f"{API}/products").json()[0]
+        pid = prod["id"]
+        r = s.post(f"{API}/wishlist", json={"product_id": pid}, headers=user_headers)
+        assert r.status_code == 200
+        r = s.get(f"{API}/wishlist", headers=user_headers)
+        assert r.status_code == 200
+        items = r.json()
+        assert any(w["product"]["id"] == pid for w in items)
+        r = s.delete(f"{API}/wishlist/{pid}", headers=user_headers)
+        assert r.status_code == 200 and r.json()["deleted"] == 1
+
+    def test_wishlist_requires_auth(self, s):
+        r = s.get(f"{API}/wishlist")
+        assert r.status_code == 401
+
+
+# ----- Stats -----
+class TestStats:
+    def test_summary_public(self, s):
+        r = s.get(f"{API}/stats/summary")
+        assert r.status_code == 200
+        d = r.json()
+        for k in ["total_products", "total_orders", "total_revenue", "pending_orders"]:
+            assert k in d
+
+    def test_report_requires_admin(self, s, user_headers):
+        r = s.get(f"{API}/stats/report", headers=user_headers)
+        assert r.status_code == 403
+
+    def test_report_admin(self, s, admin_headers):
+        r = s.get(f"{API}/stats/report", headers=admin_headers)
+        assert r.status_code == 200
+        d = r.json()
+        assert len(d["today"]) == 24
+        assert len(d["yesterday"]) == 24
+        assert isinstance(d["top_products"], list)
