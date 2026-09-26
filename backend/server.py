@@ -686,9 +686,14 @@ async def _seed_dummy_dataset():
     existing_orders = await db.orders.count_documents({})
     to_create = max(0, 10 - existing_orders)
     now = datetime.now(timezone.utc)
+    online_idx = 0
     for i in range(to_create):
-        u_idx = i % len(user_ids)
         st_o, st_p, channel, method = statuses[i]
+        if channel == "ONLINE":
+            u_idx = online_idx % len(user_ids)
+            online_idx += 1
+        else:
+            u_idx = i % len(user_ids)
         picks = random.sample(products, k=min(3, len(products)))
         items = []
         subtotal = 0

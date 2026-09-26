@@ -1,0 +1,35 @@
+{
+  "summary": "Regression + verification round for GS dummy data seeding fix and MongoDB Atlas migration. Wrote /app/backend/tests/test_iteration3_verify.py (11 tests, all PASSED). Verified via UI (owner, cashier, aarav) that all pages load real Atlas data. All 10 GS0001-GS0010 products visible in Inventory (99 total products) and Shop. 11 seeded orders present with full status mix (CONFIRMED:4, PENDING:3, DELIVERED:2, CANCELLED:1, SHIPPED:1). Reports/Settings/AdminOrders/POS/Wishlist all render. Three-role login (owner/cashier/public user) works against Atlas cluster.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "seed_dummy_data (orders)", "issue": "Seeded ONLINE order with customer_name='Aarav Sharma' has user_id=None, so aarav@example.com sees 0 orders in /api/orders?mine=true. Priya's seeded order IS linked (user_id set) and returns 1. Inconsistent user_id linkage across seeded demo orders."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {"flow": "aarav My Orders", "issue": "Empty state because seed order not linked to aarav's user_id (see backend minor). Other demo users like priya@example.com see their order.", "affected_selectors": ["/my-orders"]}
+    ],
+    "design_issues": [
+      {"screen": "Reports", "issues": ["Recurring Recharts width(-1)/height(-1) console warning during initial render - cosmetic only, chart renders correctly (already noted in iteration_2)."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_iteration3_verify.py", "/app/test_reports/pytest/iteration3.xml"],
+  "action_items": [
+    "OPTIONAL: In seed_dummy_data, ensure every seeded ONLINE order sets user_id to the matched demo customer's id (currently Aarav Sharma's seeded order has user_id=None). Small fix to make aarav@example.com's My Orders demo work per test plan."
+  ],
+  "critical_code_review_comments": [
+    "server.py still uses deprecated @app.on_event; migrate to FastAPI lifespan (carry-over from iteration_2).",
+    "list_orders auth still parsed from raw header instead of a get_optional_user dependency (carry-over).",
+    "Seeded orders use customer_name string matching without also setting user_id — brittle. Prefer looking up user by email and setting user_id atomically."
+  ],
+  "updated_files": ["/app/backend/tests/test_iteration3_verify.py"],
+  "success_rate": {"backend": "100% (11/11)", "frontend": "100% (all pages load, all 3 roles work)"},
+  "test_credentials": "Owner smallbiz743@gmail.com/Admin@123; Cashier cashier@gs.com/Cashier@123; Public aarav@example.com/Demo@1234 (and 9 more demo customers all Demo@1234).",
+  "seed_data_creation": "None. Verified backend seeder is idempotent and now includes GS0001-GS0010.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Atlas migration verified working. All 11 seed orders exist with order_status field (NOT 'status') — use order_status when filtering. Order.channel (not order_source) marks POS vs ONLINE. Only 1 known minor data issue: aarav's seed order lacks user_id linkage; priya's is fine — use priya@example.com/Demo@1234 as canonical public-user with data.",
+  "rca of the issue": "Bug fix under review (idempotent product top-up in server.py startup) is VERIFIED: all 10 GS barcodes present in /api/products and visible in UI. Atlas migration VERIFIED: DB_NAME=cashierpro on cluster0.kbamsbe... serves all data (products, categories, orders, wishlist, users) without empty/blank pages. Only residual minor is seed-data user_id linkage for Aarav's demo order."
+}
