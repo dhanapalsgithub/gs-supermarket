@@ -13,6 +13,7 @@ import logging
 import bcrypt
 import jwt
 import uuid
+import asyncio
 from pydantic import BaseModel, Field, EmailStr
 from typing import List, Optional, Literal
 from datetime import datetime, timezone, timedelta
@@ -75,6 +76,87 @@ async def require_admin(user: dict = Depends(get_current_user)) -> dict:
     if user.get("role") != "admin":
         raise HTTPException(status_code=403, detail="Admin only")
     return user
+
+
+# ---------- settings / integrations ----------
+SETTINGS_ID = "app_settings"
+DEFAULT_SETTINGS = {
+    "id": SETTINGS_ID,
+    "sms_enabled": False,
+    "payment_gateway": "SIMULATED",  # SIMULATED | STRIPE | RAZORPAY
+    "sms_provider": "TWILIO",
+    "updated_at": now_iso(),
+}
+
+
+async def get_settings():
+    s = await db.settings.find_one({"id": SETTINGS_ID}, {"_id": 0})
+    if not s:
+        await db.settings.insert_one(DEFAULT_SETTINGS.copy())
+        s = DEFAULT_SETTINGS.copy()
+    return s
+
+
+class SettingsUpdate(BaseModel):
+    sms_enabled: Optional[bool] = None
+    payment_gateway: Optional[Literal["SIMULATED", "STRIPE", "RAZORPAY"]] = None
+    sms_provider: Optional[str] = None
+
+
+async def send_sms(phone: str, body: str) -> bool:
+    """Fire-and-forget SMS via Twilio; graceful when keys missing."""
+    if not phone:
+        return False
+    sid = os.environ.get("TWILIO_ACCOUNT_SID")
+    token = os.environ.get("TWILIO_AUTH_TOKEN")
+    from_num = os.environ.get("TWILIO_FROM_NUMBER")
+    if not (sid and token and from_num):
+        logger.info(f"[SMS skipped - Twilio keys missing] → {phone}: {body}")
+        return False
+
+    # normalize Indian 10-digit numbers
+    to = phone.strip().replace(" ", "").replace("-", "")
+    if to and to[0].isdigit() and len(to) == 10:
+        to = f"+91{to}"
+    elif to and not to.startswith("+"):
+        to = f"+{to}"
+
+    try:
+        from twilio.rest import Client  # type: ignore
+        client = Client(sid, token)
+        msg = await asyncio.to_thread(client.messages.create, body=body, from_=from_num, to=to)
+        logger.info(f"[SMS sent] {msg.sid} → {to}")
+        return True
+    except Exception as e:
+        logger.warning(f"[SMS failed] {to}: {e}")
+        return False
+
+
+async def maybe_notify_status_change(order: dict, new_order_status: Optional[str], new_payment_status: Optional[str]):
+    settings = await get_settings()
+    if not settings.get("sms_enabled"):
+        return
+    phone = order.get("customer_phone")
+    if not phone:
+        return
+    store = "GS Supermarket"
+    parts = []
+    if new_order_status == "SHIPPED":
+        parts.append(f"Your order {order['receipt_no']} has been SHIPPED and is on the way.")
+    if new_order_status == "DELIVERED":
+        parts.append(f"Your order {order['receipt_no']} was DELIVERED. Thank you for shopping at {store}!")
+    if new_order_status == "CANCELLED":
+        parts.append(f"Your order {order['receipt_no']} was CANCELLED. Contact {store} for details.")
+    if new_payment_status == "PAID":
+        parts.append(f"Payment received for {order['receipt_no']} — Rs{order['total']:.2f}. Thank you!")
+    if not parts:
+        return
+    body = " ".join(parts)
+    sent = await send_sms(phone, body)
+    await db.orders.update_one(
+        {"id": order["id"]},
+        {"$push": {"status_history": {"at": now_iso(), "event": "SMS", "sent": sent, "body": body[:160]}}},
+    )
 
 
 # ---------- models ----------
@@ -364,7 +446,34 @@ async def update_order_status(oid: str, payload: OrderStatusUpdate, _: dict = De
     history_entry = {"at": now_iso(), **updates}
     await db.orders.update_one({"id": oid}, {"$set": updates, "$push": {"status_history": history_entry}})
     doc = await db.orders.find_one({"id": oid}, {"_id": 0})
+    # SMS notification (fire & forget)
+    try:
+        await maybe_notify_status_change(doc, payload.order_status, payload.payment_status)
+    except Exception as e:
+        logger.warning(f"notify failed: {e}")
     return doc
+
+
+# ---------- settings endpoints ----------
+@api.get("/settings")
+async def read_settings():
+    s = await get_settings()
+    return {
+        **s,
+        "integrations": {
+            "twilio": bool(os.environ.get("TWILIO_ACCOUNT_SID") and os.environ.get("TWILIO_AUTH_TOKEN") and os.environ.get("TWILIO_FROM_NUMBER")),
+            "stripe": bool(os.environ.get("STRIPE_API_KEY")),
+            "razorpay": bool(os.environ.get("RAZORPAY_KEY_ID") and os.environ.get("RAZORPAY_KEY_SECRET")),
+        },
+    }
+
+
+@api.put("/settings")
+async def write_settings(payload: SettingsUpdate, _: dict = Depends(require_admin)):
+    updates = {k: v for k, v in payload.model_dump().items() if v is not None}
+    updates["updated_at"] = now_iso()
+    await db.settings.update_one({"id": SETTINGS_ID}, {"$set": updates}, upsert=True)
+    return await read_settings()
 
 
 # ---------- wishlist ----------
@@ -454,7 +563,7 @@ async def stats_report(_: dict = Depends(require_admin)):
 # ---------- root ----------
 @api.get("/")
 async def root():
-    return {"message": "CashierPro API", "brand": "R I Billing Pro"}
+    return {"message": "GS Billing API", "brand": "GS", "built_by": "R I Billing Pro", "pos_name": "GS"}
 
 
 app.include_router(api)

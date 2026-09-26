@@ -18,6 +18,7 @@ import POS from "./pages/POS";
 import AdminOrders from "./pages/AdminOrders";
 import Reports from "./pages/Reports";
 import Inventory from "./pages/Inventory";
+import Settings from "./pages/Settings";
 
 function App() {
   return (
@@ -47,6 +48,7 @@ function App() {
               <Route path="/admin/orders" element={<AdminOrders />} />
               <Route path="/admin/reports" element={<Reports />} />
               <Route path="/admin/inventory" element={<Inventory />} />
+              <Route path="/admin/settings" element={<Settings />} />
             </Route>
 
             <Route path="*" element={<Navigate to="/" replace />} />

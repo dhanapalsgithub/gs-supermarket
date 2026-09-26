@@ -1,6 +1,7 @@
 import { NavLink, Outlet, useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { LayoutGrid, ClipboardList, BarChart3, Boxes, LogOut, Store, ShoppingBag } from "lucide-react";
+import { LayoutGrid, ClipboardList, BarChart3, Boxes, LogOut, ShoppingBag, Settings } from "lucide-react";
+import GSLogo from "../components/GSLogo";
 import Footer from "../components/Footer";
 
 export default function AdminShell() {
@@ -12,18 +13,17 @@ export default function AdminShell() {
     { to: "/admin/orders", icon: ClipboardList, label: "Orders", tid: "admin-nav-orders" },
     { to: "/admin/reports", icon: BarChart3, label: "Reports", tid: "admin-nav-reports" },
     { to: "/admin/inventory", icon: Boxes, label: "Inventory", tid: "admin-nav-inventory" },
+    { to: "/admin/settings", icon: Settings, label: "Settings", tid: "admin-nav-settings" },
   ];
 
   return (
     <div className="min-h-screen flex">
       <aside className="w-16 md:w-56 shrink-0 border-r border-white/40 glass rounded-none flex flex-col">
         <div className="h-16 flex items-center gap-2 justify-center md:justify-start md:px-5 border-b border-white/40">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500 text-white flex items-center justify-center shadow-lg shadow-indigo-500/30">
-            <Store className="w-5 h-5" />
-          </div>
+          <GSLogo size={36} />
           <div className="hidden md:block leading-tight">
             <div className="text-[9px] uppercase tracking-widest text-slate-500 font-semibold">R I Billing Pro</div>
-            <div className="text-sm font-extrabold tracking-tight">Admin</div>
+            <div className="text-sm font-extrabold tracking-tight">GS Admin</div>
           </div>
         </div>
         <nav className="flex-1 p-2 md:p-3 space-y-1">

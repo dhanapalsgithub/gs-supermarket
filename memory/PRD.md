@@ -42,10 +42,26 @@ Full-stack retail platform combining an in-store POS (with Milestone Y50 Bluetoo
 - White liquid-glass theme (indigo/violet accents, blurred glass cards, radial gradient background, subtle floating orbs)
 - "Built by R I Billing Pro" footer everywhere + printed on receipt (screen + thermal ESC/POS)
 
+## Implemented (2026-09, iteration 3)
+- Rebranded POS to **GS** with custom glossy **GS logo** (SVG gradient tile) across Landing, Login, Register, User & Admin shells
+- Receipt header now prints "GS SUPERMARKET" (screen + thermal ESC/POS)
+- Admin **Settings** page (`/admin/settings`): payment gateway picker (Simulated / Stripe / Razorpay with key-readiness badges) + SMS toggle
+- Backend `/api/settings` (GET public, PUT admin-only); Twilio SMS helper wired to order status changes (SHIPPED / DELIVERED / PAID / CANCELLED) with Indian +91 normalization and graceful skip when keys are missing
+- `twilio==9.11.1` installed; requirements.txt refreshed
+
+## Atlas Migration (blocked)
+- User provided Atlas URI for cluster0.kbamsbe.mongodb.net (db: `cashierpro`)
+- TLS handshake rejected (`tlsv1 alert internal error`) — pod egress IP **34.170.12.145** is NOT in Atlas Network Access allowlist
+- Backend rolled back to local MongoDB (`test_database`) to keep app live
+- Action: user must add `34.170.12.145/32` (or `0.0.0.0/0`) in Atlas → Security → Network Access, then say "done" and I'll flip MONGO_URL + migrate data
+
 ## Backlog / Next
 - P1: Real payment gateway (Stripe/Razorpay) toggle
 - P1: Order confirmation email (Resend integration)
 - P1: SMS notifications on status changes (Twilio)
 - P2: Customer loyalty tier + auto-discount
 - P2: Multi-outlet + per-cashier login logs
+- P1: Complete Atlas switch once IP is whitelisted (add data copy from local Mongo)
+- P1: Razorpay live checkout flow once RAZORPAY_KEY_ID + RAZORPAY_KEY_SECRET are added
+- P1: Twilio live SMS once keys are added (toggle already in Settings)
 - P2: Migrate `@app.on_event` to lifespan handlers

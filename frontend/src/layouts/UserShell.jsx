@@ -1,6 +1,7 @@
 import { NavLink, Outlet, useNavigate, Link } from "react-router-dom";
 import { useAuth, useCart } from "../context/AuthContext";
-import { ShoppingBag, Heart, ShoppingCart, Package, User, LogOut, Store, LogIn } from "lucide-react";
+import { ShoppingBag, Heart, ShoppingCart, Package, User, LogOut, LogIn } from "lucide-react";
+import GSLogo, { GSLogoWithText } from "../components/GSLogo";
 import Footer from "../components/Footer";
 
 export default function UserShell() {
@@ -33,14 +34,8 @@ export default function UserShell() {
   return (
     <div className="min-h-screen flex flex-col">
       <header className="sticky top-0 z-40 glass border-0 border-b border-white/40 rounded-none px-4 md:px-8 py-3 flex items-center gap-4">
-        <Link to="/shop" className="flex items-center gap-2">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/30">
-            <Store className="w-5 h-5" />
-          </div>
-          <div className="leading-tight">
-            <div className="text-[10px] uppercase tracking-widest text-slate-500 font-semibold">R I Billing Pro</div>
-            <div className="text-lg font-extrabold tracking-tight">Cashier<span className="text-indigo-500">Pro</span></div>
-          </div>
+        <Link to="/shop" className="flex items-center">
+          <GSLogoWithText size={40} subtitle="Billing" />
         </Link>
 
         <nav className="ml-auto flex items-center gap-1 md:gap-2 bg-slate-100/60 rounded-xl p-1">

@@ -114,7 +114,7 @@ function buildReceiptBytes(sale) {
   line("R I BILLING PRO");
   push([ESC, 0x21, 0x00]);
   push([ESC, 0x45, 0x01]);
-  line("CashierPro Mart");
+  line("GS SUPERMARKET");
   push([ESC, 0x45, 0x00]);
   line("Fresh Groceries - Daily Needs");
   line("GSTIN: 33ABCDE1234F1Z5");

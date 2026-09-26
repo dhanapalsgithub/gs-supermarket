@@ -40,7 +40,7 @@ export default function ReceiptModal({ sale, onClose }) {
           <div className="flex justify-center mb-4">
             <div className="receipt-58">
               <div className="center bold" style={{ fontSize: 14, letterSpacing: 1 }}>R I BILLING PRO</div>
-              <div className="center bold" style={{ fontSize: 12 }}>CASHIERPRO MART</div>
+              <div className="center bold" style={{ fontSize: 12 }}>GS SUPERMARKET</div>
               <div className="center" style={{ fontSize: 9 }}>Fresh Groceries · Daily Needs</div>
               <div className="center" style={{ fontSize: 9 }}>GSTIN: 33ABCDE1234F1Z5</div>
               <hr />

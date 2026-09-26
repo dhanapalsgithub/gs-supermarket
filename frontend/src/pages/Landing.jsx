@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { ShoppingBag, LayoutGrid, ShieldCheck, Bluetooth } from "lucide-react";
+import { ShoppingBag, LayoutGrid, Bluetooth } from "lucide-react";
+import GSLogo, { GSLogoWithText } from "../components/GSLogo";
 import Footer from "../components/Footer";
 
 export default function Landing() {
@@ -8,14 +9,8 @@ export default function Landing() {
   return (
     <div className="min-h-screen flex flex-col">
       <header className="px-6 md:px-12 py-6 flex items-center">
-        <div className="flex items-center gap-2">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500 text-white flex items-center justify-center shadow-lg shadow-indigo-500/40">
-            <ShieldCheck className="w-5 h-5" />
-          </div>
-          <div className="leading-tight">
-            <div className="text-[10px] uppercase tracking-widest text-slate-500 font-bold">R I Billing Pro</div>
-            <div className="text-lg font-extrabold">CashierPro</div>
-          </div>
+        <div className="flex items-center">
+          <GSLogoWithText size={40} subtitle="Billing" />
         </div>
         <div className="ml-auto flex items-center gap-2">
           {!user && <Link to="/login" data-testid="landing-login" className="chip chip-off">Sign In</Link>}
@@ -28,7 +23,7 @@ export default function Landing() {
       <section className="flex-1 flex items-center px-6 md:px-12">
         <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-10 items-center w-full">
           <div>
-            <div className="label-cap mb-3">Modern Retail · POS + Online Store</div>
+            <div className="label-cap mb-3">Modern Retail · GS POS + Online Store</div>
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.05]">
               Bill in-store, sell online, print on <span className="bg-gradient-to-r from-indigo-500 to-violet-500 bg-clip-text text-transparent">Milestone&nbsp;Y50</span>.
             </h1>
@@ -68,7 +63,7 @@ export default function Landing() {
                 ))}
               </div>
               <div className="mt-4 text-center text-[10px] text-slate-500">
-                Powered by <span className="font-semibold text-indigo-600">R I Billing Pro</span> · Test admin: smallbiz743@gmail.com
+                <span className="font-semibold text-indigo-600">GS Billing</span> · Powered by <span className="font-semibold text-indigo-600">R I Billing Pro</span>
               </div>
             </div>
           </div>

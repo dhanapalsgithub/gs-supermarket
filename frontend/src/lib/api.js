@@ -45,6 +45,10 @@ export const updateProfile = (payload) => api.put("/auth/profile", payload).then
 export const fetchStats = () => api.get("/stats/summary").then((r) => r.data);
 export const fetchReport = () => api.get("/stats/report").then((r) => r.data);
 
+// Settings
+export const fetchSettings = () => api.get("/settings").then((r) => r.data);
+export const updateSettings = (payload) => api.put("/settings", payload).then((r) => r.data);
+
 export const money = (n) =>
   `₹${Number(n || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
