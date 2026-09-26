@@ -592,16 +592,17 @@ async def _startup():
     await db.users.create_index("email", unique=True)
     await db.products.create_index("barcode")
     await db.orders.create_index("created_at")
-    # seed products
-    if await db.products.count_documents({}) == 0:
-        try:
-            from seed_data import PRODUCTS
-            docs = [Product(**p).model_dump() for p in PRODUCTS]
-            if docs:
-                await db.products.insert_many(docs)
-                logger.info(f"Seeded {len(docs)} products")
-        except Exception as e:
-            logger.warning(f"Seed skipped: {e}")
+    # seed products (idempotent by barcode - top up any missing)
+    try:
+        from seed_data import PRODUCTS
+        existing_barcodes = set(await db.products.distinct("barcode"))
+        missing = [p for p in PRODUCTS if p.get("barcode") not in existing_barcodes]
+        if missing:
+            docs = [Product(**p).model_dump() for p in missing]
+            await db.products.insert_many(docs)
+            logger.info(f"Seeded {len(docs)} new products (top-up)")
+    except Exception as e:
+        logger.warning(f"Seed skipped: {e}")
     # seed / migrate owner (was 'admin' role)
     owner_email = os.environ.get("ADMIN_EMAIL", "admin@example.com").lower()
     owner_password = os.environ.get("ADMIN_PASSWORD", "admin123")
