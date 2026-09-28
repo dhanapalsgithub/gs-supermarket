@@ -825,6 +825,15 @@ async def root():
 
 
 # 1. முதலில் CORS மிடில்வேரைச் சேர்க்க வேண்டும்
+
+
+# 2. அதன் பிறகு ரூட்டரைச் சேர்க்க வேண்டும்
+app.include_router(api)
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
@@ -833,11 +842,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 2. அதன் பிறகு ரூட்டரைச் சேர்க்க வேண்டும்
+# 2. அதன் பிறகு ரூட்டரைச் சேர்க்கவும்
 app.include_router(api)
-
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
 
 
 @app.on_event("startup")
