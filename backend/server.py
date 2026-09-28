@@ -834,6 +834,13 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+import os
+
+app = FastAPI()
+
+# 1. முதலில் CORS மிடில்வேரைச் சேர்க்கவும்
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
@@ -844,7 +851,6 @@ app.add_middleware(
 
 # 2. அதன் பிறகு ரூட்டரைச் சேர்க்கவும்
 app.include_router(api)
-
 
 @app.on_event("startup")
 async def _startup():
