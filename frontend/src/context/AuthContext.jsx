@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from "react";
-import { authLogin, authRegister, authMe } from "../lib/api";
+import { authLogin, authMe, api } from "../lib/api";
 
 const AuthContext = createContext(null);
 
@@ -14,14 +14,18 @@ export function AuthProvider({ children }) {
   }, []);
 
   const login = async (email, password) => {
-    const { token, user } = await authLogin(email, password);
+    const res = await authLogin(email, password);
+    const token = res.token || res.data?.token;
+    const userData = res.user || res.data?.user;
     localStorage.setItem("token", token);
-    setUser(user);
-    return user;
+    setUser(userData);
+    return userData;
   };
 
   const register = async (payload) => {
-    const { token, user } = await authRegister(payload);
+    // நேரடியாக api-ஐப் பயன்படுத்தி பதிவு செய்தல்
+    const response = await api.post("/auth/register", payload);
+    const { token, user } = response.data;
     localStorage.setItem("token", token);
     setUser(user);
     return user;

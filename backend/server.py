@@ -89,7 +89,7 @@ SETTINGS_ID = "app_settings"
 DEFAULT_SETTINGS = {
     "id": SETTINGS_ID,
     "sms_enabled": False,
-    "payment_gateway": "SIMULATED",  # SIMULATED | STRIPE | RAZORPAY
+    "payment_gateway": "SIMULATED",
     "sms_provider": "TWILIO",
     "updated_at": now_iso(),
 }
@@ -107,10 +107,12 @@ class SettingsUpdate(BaseModel):
     sms_enabled: Optional[bool] = None
     payment_gateway: Optional[Literal["SIMULATED", "STRIPE", "RAZORPAY"]] = None
     sms_provider: Optional[str] = None
+    
+class BroadcastOfferInput(BaseModel):
+    message: str
 
 
 async def send_sms(phone: str, body: str) -> bool:
-    """Fire-and-forget SMS via Twilio; graceful when keys missing."""
     if not phone:
         return False
     sid = os.environ.get("TWILIO_ACCOUNT_SID")
@@ -120,7 +122,6 @@ async def send_sms(phone: str, body: str) -> bool:
         logger.info(f"[SMS skipped - Twilio keys missing] → {phone}: {body}")
         return False
 
-    # normalize Indian 10-digit numbers
     to = phone.strip().replace(" ", "").replace("-", "")
     if to and to[0].isdigit() and len(to) == 10:
         to = f"+91{to}"
@@ -176,6 +177,14 @@ class Product(BaseModel):
     unit: Optional[str] = "pcs"
     image_hint: Optional[str] = None
     created_at: str = Field(default_factory=now_iso)
+# --- NEW PURCHASE MODEL ---
+class PurchaseCreate(BaseModel):
+    supplier_name: str
+    product_code: str
+    product_name: str
+    rate: float
+    closing_qty: float
+    date: str  # Format: YYYY-MM-DD
 
 
 class ProductCreate(BaseModel):
@@ -229,6 +238,24 @@ class WishlistItemIn(BaseModel):
 
 class ProfileUpdate(BaseModel):
     name: Optional[str] = None; phone: Optional[str] = None; address: Optional[str] = None
+    
+class OfferBroadcastInput(BaseModel):
+    message: str
+
+
+# --- NEW MODELS FOR CUSTOMERS & SUPPLIERS ---
+class CustomerCreate(BaseModel):
+    name: str
+    phone: str
+    email: Optional[str] = None
+    address: Optional[str] = None
+
+class SupplierCreate(BaseModel):
+    name: str
+    phone: str
+    email: Optional[str] = None
+    company: Optional[str] = None
+    address: Optional[str] = None
 
 
 # ---------- auth endpoints ----------
@@ -273,6 +300,109 @@ async def update_profile(payload: ProfileUpdate, user: dict = Depends(get_curren
     return await db.users.find_one({"id": user["id"]}, {"_id": 0, "password_hash": 0})
 
 
+# ---------- customers endpoints ----------
+@api.get("/customers")
+async def list_customers(_: dict = Depends(require_staff)):
+    customers = await db.customers.find({}, {"_id": 0}).to_list(1000)
+    
+    for c in customers:
+        if "id" not in c:
+            c["id"] = str(uuid.uuid4())
+
+    orders = await db.orders.find({}, {"_id": 0, "customer_name": 1, "customer_phone": 1, "channel": 1}).to_list(2000)
+    existing_phones = {c.get("phone") for c in customers}
+    
+    for ord in orders:
+        c_name = ord.get("customer_name")
+        c_phone = ord.get("customer_phone")
+        c_channel = ord.get("channel", "POS")
+        
+        if (c_name or c_phone) and c_phone not in existing_phones and c_phone:
+            new_c = {
+                "id": str(uuid.uuid4()),
+                "name": c_name or "Walk-in Customer",
+                "phone": c_phone,
+                "email": "N/A",
+                "type": "ONLINE" if c_channel == "ONLINE" else "WALKING",
+                "created_at": now_iso()
+            }
+            await db.customers.insert_one(new_c)
+            customers.append({k: v for k, v in new_c.items() if k != "_id"})
+            existing_phones.add(c_phone)
+
+    online = [c for c in customers if c.get("type") == "ONLINE" or c.get("channel") == "ONLINE"]
+    walking = [c for c in customers if c not in online]
+
+    return {
+        "online": online,
+        "walking": walking
+    }
+
+
+@api.post("/customers")
+async def create_customer(payload: CustomerCreate, _: dict = Depends(require_staff)):
+    doc = {
+        "id": str(uuid.uuid4()),
+        **payload.model_dump(),
+        "created_at": now_iso()
+    }
+    await db.customers.insert_one(doc)
+    return {k: v for k, v in doc.items() if k != "_id"}
+
+
+@api.put("/customers/{cid}")
+async def update_customer(cid: str, payload: CustomerCreate, _: dict = Depends(require_staff)):
+    await db.customers.update_one(
+        {"$or": [{"id": cid}, {"phone": cid}]}, 
+        {"$set": payload.model_dump()}
+    )
+    return {"ok": True}
+
+
+@api.delete("/customers/{cid}")
+async def delete_customer(cid: str, _: dict = Depends(require_staff)):
+    await db.customers.delete_one({"$or": [{"id": cid}, {"phone": cid}]})
+    return {"ok": True}
+
+
+# ---------- suppliers endpoints ----------
+@api.post("/suppliers")
+async def create_supplier(payload: SupplierCreate, _: dict = Depends(require_owner)):
+    doc = {
+        "id": str(uuid.uuid4()),
+        **payload.model_dump(),
+        "created_at": now_iso()
+    }
+    await db.suppliers.insert_one(doc)
+    return {k: v for k, v in doc.items() if k != "_id"}
+# ---------- suppliers endpoints ----------
+@api.get("/suppliers")
+async def list_suppliers(_: dict = Depends(require_staff)):
+    suppliers = await db.suppliers.find({}, {"_id": 0}).to_list(1000)
+    for s in suppliers:
+        if "id" not in s:
+            s["id"] = str(uuid.uuid4())
+    return suppliers
+
+@api.post("/suppliers")
+async def create_supplier(payload: SupplierCreate, _: dict = Depends(require_owner)):
+    doc = {
+        "id": str(uuid.uuid4()),
+        **payload.model_dump(),
+        "created_at": now_iso()
+    }
+    await db.suppliers.insert_one(doc)
+    return {k: v for k, v in doc.items() if k != "_id"}
+
+@api.put("/suppliers/{sid}")
+async def update_supplier(sid: str, payload: SupplierCreate, _: dict = Depends(require_owner)):
+    await db.suppliers.update_one(
+        {"$or": [{"id": sid}, {"phone": sid}]}, 
+        {"$set": payload.model_dump()}
+    )
+    return {"ok": True}
+
+
 # ---------- product endpoints ----------
 @api.get("/products")
 async def list_products(q: Optional[str] = None, category: Optional[str] = None):
@@ -299,6 +429,53 @@ async def create_product(payload: ProductCreate, _: dict = Depends(require_owner
     await db.products.insert_one(prod.model_dump())
     return prod
 
+@api.post("/admin/broadcast-offer")
+async def broadcast_offer(payload: OfferBroadcastInput, _: dict = Depends(require_owner)):
+    # டேட்டாபேஸில் ஆஃபரைச் சேமித்தல் (பயனர்கள் பார்க்க வசதியாக)
+    offer_doc = {
+        "id": str(uuid.uuid4()),
+        "message": payload.message,
+        "created_at": now_iso()
+    }
+    await db.offers.insert_one(offer_doc)
+
+    # (ஏற்கனவே உள்ள Twilio SMS அனுப்புவதற்கான லஜிக் இங்கே தொடரலாம்...)
+    online_customers = await db.customers.find({"$or": [{"type": "ONLINE"}, {"channel": "ONLINE"}]}, {"_id": 0, "phone": 1}).to_list(5000)
+    all_phones = {c.get("phone") for c in online_customers if c.get("phone")}
+    
+    sent_count = 0
+    for phone in all_phones:
+        success = await send_sms(phone, payload.message)
+        if success:
+            sent_count += 1
+
+    return {
+        "success": True,
+        "total_targeted": len(all_phones),
+        "sent": sent_count
+    }
+
+# 2. பயனர்கள் (Users/Customers) ஆஃபர்களைப் பார்க்க புதிய API:
+@api.get("/offers/active")
+async def get_active_offers():
+    # கடைசியாக அனுப்பப்பட்ட ஆஃபர்களைப் பெற (கடைசி 5 ஆஃபர்கள்)
+    offers = await db.offers.find({}, {"_id": 0}).sort("created_at", -1).limit(5).to_list(5)
+    return offers
+
+@api.put("/admin/offers/{oid}")
+async def update_offer(oid: str, payload: OfferBroadcastInput, _: dict = Depends(require_owner)):
+    result = await db.offers.update_one({"id": oid}, {"$set": {"message": payload.message}})
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Offer not found")
+    return {"ok": True}
+
+
+@api.delete("/admin/offers/{oid}")
+async def delete_offer(oid: str, _: dict = Depends(require_owner)):
+    result = await db.offers.delete_one({"id": oid})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Offer not found")
+    return {"ok": True}
 
 @api.put("/products/{pid}")
 async def update_product(pid: str, payload: ProductUpdate, _: dict = Depends(require_owner)):
@@ -321,10 +498,43 @@ async def delete_product(pid: str, _: dict = Depends(require_owner)):
 async def list_categories():
     return sorted(await db.products.distinct("category"))
 
+# ---------- purchases endpoints ----------
+@api.get("/purchases")
+async def list_purchases(_: dict = Depends(require_staff)):
+    purchases = await db.purchases.find({}, {"_id": 0}).to_list(2000)
+    for p in purchases:
+        if "id" not in p:
+            p["id"] = str(uuid.uuid4())
+    return purchases
+
+@api.post("/purchases")
+async def create_purchase(payload: PurchaseCreate, _: dict = Depends(require_staff)):
+    closing_value = payload.rate * payload.closing_qty
+    doc = {
+        "id": str(uuid.uuid4()),
+        **payload.model_dump(),
+        "closing_value": closing_value,
+        "created_at": now_iso()
+    }
+    await db.purchases.insert_one(doc)
+    return {k: v for k, v in doc.items() if k != "_id"}
+
+@api.put("/purchases/{pid}")
+async def update_purchase(pid: str, payload: PurchaseCreate, _: dict = Depends(require_staff)):
+    closing_value = payload.rate * payload.closing_qty
+    await db.purchases.update_one(
+        {"id": pid}, 
+        {"$set": {**payload.model_dump(), "closing_value": closing_value}}
+    )
+    return {"ok": True}
+
+@api.delete("/purchases/{pid}")
+async def delete_purchase(pid: str, _: dict = Depends(require_staff)):
+    await db.purchases.delete_one({"id": pid})
+    return {"ok": True}
 
 @api.post("/products/import")
 async def import_products(file: UploadFile = File(...), _: dict = Depends(require_owner)):
-    """Import CSV with columns: name, category, price, stock, barcode, unit"""
     content = (await file.read()).decode("utf-8", errors="ignore")
     reader = csv.DictReader(io.StringIO(content))
     created, updated, errors = 0, 0, 0
@@ -358,14 +568,13 @@ async def import_products(file: UploadFile = File(...), _: dict = Depends(requir
     return {"created": created, "updated": updated, "errors": errors}
 
 
-# ---------- orders (unified with sales) ----------
+# ---------- orders ----------
 def gen_receipt_no():
     return f"RCP-{datetime.now(timezone.utc).strftime('%Y%m%d')}-{uuid.uuid4().hex[:6].upper()}"
 
 
 @api.post("/orders")
 async def create_order(payload: OrderCreate, request: Request):
-    """Create order. Auth optional - anonymous walk-in sales allowed."""
     user_id = None
     auth = request.headers.get("Authorization", "")
     if auth.startswith("Bearer "):
@@ -376,10 +585,6 @@ async def create_order(payload: OrderCreate, request: Request):
             pass
 
     channel = payload.channel
-    # Order flow:
-    #  POS: paid immediately, status CONFIRMED
-    #  ONLINE with COD: unpaid until delivery, status PENDING
-    #  ONLINE with UPI: paid on QR confirm, status CONFIRMED
     if channel == "POS":
         payment_status = "PAID"
         order_status = "CONFIRMED"
@@ -398,15 +603,36 @@ async def create_order(payload: OrderCreate, request: Request):
         "created_at": now_iso(),
     }
     await db.orders.insert_one(doc)
-    # decrement stock
+    
     for it in payload.items:
         await db.products.update_one({"id": it.product_id}, {"$inc": {"stock": -it.quantity}})
+
+    if payload.customer_name or payload.customer_phone:
+        phone = payload.customer_phone or "N/A"
+        existing_cust = await db.customers.find_one({"phone": phone})
+        customer_type = "ONLINE" if channel == "ONLINE" else "WALKING"
+        
+        if not existing_cust:
+            cust_doc = {
+                "id": str(uuid.uuid4()),
+                "name": payload.customer_name or "Walk-in Customer",
+                "phone": phone,
+                "email": getattr(payload, 'customer_email', None) or "N/A",
+                "type": customer_type,
+                "created_at": now_iso()
+            }
+            await db.customers.insert_one(cust_doc)
+        else:
+            await db.customers.update_one(
+                {"phone": phone},
+                {"$set": {"name": payload.customer_name or existing_cust.get("name"), "type": customer_type}}
+            )
+
     return {k: v for k, v in doc.items() if k != "_id"}
 
 
 @api.get("/orders")
 async def list_orders(request: Request, mine: bool = False, limit: int = 200):
-    # try current user
     auth = request.headers.get("Authorization", "") if request else ""
     curr = None
     if auth.startswith("Bearer "):
@@ -452,7 +678,6 @@ async def update_order_status(oid: str, payload: OrderStatusUpdate, _: dict = De
     history_entry = {"at": now_iso(), **updates}
     await db.orders.update_one({"id": oid}, {"$set": updates, "$push": {"status_history": history_entry}})
     doc = await db.orders.find_one({"id": oid}, {"_id": 0})
-    # SMS notification (fire & forget)
     try:
         await maybe_notify_status_change(doc, payload.order_status, payload.payment_status)
     except Exception as e:
@@ -486,7 +711,6 @@ async def write_settings(payload: SettingsUpdate, _: dict = Depends(require_owne
 @api.get("/wishlist")
 async def get_wishlist(user: dict = Depends(get_current_user)):
     items = await db.wishlist.find({"user_id": user["id"]}, {"_id": 0}).to_list(500)
-    # attach product info
     result = []
     for w in items:
         p = await db.products.find_one({"id": w["product_id"]}, {"_id": 0})
@@ -515,19 +739,48 @@ async def del_wishlist(product_id: str, user: dict = Depends(get_current_user)):
 @api.get("/stats/summary")
 async def stats_summary():
     total_products = await db.products.count_documents({})
-    total_orders = await db.orders.count_documents({})
-    agg = await db.orders.aggregate([
+    total_customers = await db.customers.count_documents({})
+    total_supplier = await db.suppliers.count_documents({})
+    total_online_order = await db.orders.count_documents({"channel": "ONLINE"})
+    
+    # Inventory sum of stock quantities
+    inv_agg = await db.products.aggregate([
+        {"$group": {"_id": None, "total_stock": {"$sum": "$stock"}}}
+    ]).to_list(1)
+    total_inventory_product = inv_agg[0]["total_stock"] if inv_agg else 0
+
+    # Purchase metrics
+    purchase_agg = await db.purchases.aggregate([
+        {"$group": {"_id": None, "total_qty": {"$sum": "$closing_qty"}, "total_cost": {"$sum": "$closing_value"}}}
+    ]).to_list(1)
+    total_purchase_product = purchase_agg[0]["total_qty"] if purchase_agg else 0
+    total_purchase_cost = purchase_agg[0]["total_cost"] if purchase_agg else 0
+
+    # Revenue calculation
+    rev_agg = await db.orders.aggregate([
         {"$match": {"payment_status": "PAID"}},
         {"$group": {"_id": None, "revenue": {"$sum": "$total"}}},
     ]).to_list(1)
-    revenue = agg[0]["revenue"] if agg else 0
-    pending = await db.orders.count_documents({"order_status": {"$in": ["PENDING", "CONFIRMED"]}})
-    return {"total_products": total_products, "total_orders": total_orders, "total_revenue": round(revenue, 2), "pending_orders": pending}
+    total_revenue = rev_agg[0]["revenue"] if rev_agg else 0
 
+    total_profit = total_revenue - total_purchase_cost
+    pending = await db.orders.count_documents({"order_status": {"$in": ["PENDING", "CONFIRMED"]}})
+
+    return {
+        "total_products": total_products,
+        "total_customers": total_customers,
+        "total_supplier": total_supplier,
+        "total_online_order": total_online_order,
+        "total_purchase_product": total_purchase_product,
+        "total_inventory_product": round(total_inventory_product, 2),
+        "total_revenue": round(total_revenue, 2),
+        "total_purchase_cost": round(total_purchase_cost, 2),
+        "total_profit": round(total_profit, 2),
+        "pending_orders": pending
+    }
 
 @api.get("/stats/report")
 async def stats_report(_: dict = Depends(require_owner)):
-    """Today vs yesterday hourly + top 5 selling products"""
     now = datetime.now(timezone.utc)
     today_start = datetime(now.year, now.month, now.day, tzinfo=timezone.utc)
     yesterday_start = today_start - timedelta(days=1)
@@ -550,7 +803,6 @@ async def stats_report(_: dict = Depends(require_owner)):
     today = await bucket_hourly(today_start, tomorrow_start)
     yesterday = await bucket_hourly(yesterday_start, today_start)
 
-    # top 5 products (all-time paid)
     top = await db.orders.aggregate([
         {"$match": {"payment_status": "PAID"}},
         {"$unwind": "$items"},
@@ -588,11 +840,22 @@ logger = logging.getLogger(__name__)
 
 @app.on_event("startup")
 async def _startup():
-    # indexes
     await db.users.create_index("email", unique=True)
     await db.products.create_index("barcode")
     await db.orders.create_index("created_at")
-    # seed products (idempotent by barcode - top up any missing)
+    
+    if await db.customers.count_documents({}) == 0:
+        await db.customers.insert_many([
+            {"id": str(uuid.uuid4()), "name": "Rahul Kumar", "phone": "9876543210", "email": "rahul@gmail.com", "address": "Chennai", "created_at": now_iso()},
+            {"id": str(uuid.uuid4()), "name": "Anitha Raj", "phone": "9123456780", "email": "anitha@gmail.com", "address": "Coimbatore", "created_at": now_iso()}
+        ])
+    
+    if await db.suppliers.count_documents({}) == 0:
+        await db.suppliers.insert_many([
+            {"id": str(uuid.uuid4()), "name": "Green Farms Ltd", "phone": "9988776655", "email": "support@greenfarms.com", "company": "Green Farms", "address": "Madurai", "created_at": now_iso()},
+            {"id": str(uuid.uuid4()), "name": "Apex Distributors", "phone": "9888777666", "email": "sales@apexdist.com", "company": "Apex Corp", "address": "Trichy", "created_at": now_iso()}
+        ])
+
     try:
         from seed_data import PRODUCTS
         existing_barcodes = set(await db.products.distinct("barcode"))
@@ -600,13 +863,11 @@ async def _startup():
         if missing:
             docs = [Product(**p).model_dump() for p in missing]
             await db.products.insert_many(docs)
-            logger.info(f"Seeded {len(docs)} new products (top-up)")
     except Exception as e:
         logger.warning(f"Seed skipped: {e}")
-    # seed / migrate owner (was 'admin' role)
+
     owner_email = os.environ.get("ADMIN_EMAIL", "admin@example.com").lower()
     owner_password = os.environ.get("ADMIN_PASSWORD", "admin123")
-    # migrate any legacy admin role → owner
     await db.users.update_many({"role": "admin"}, {"$set": {"role": "owner"}})
     existing = await db.users.find_one({"email": owner_email})
     if not existing:
@@ -614,125 +875,10 @@ async def _startup():
             "id": str(uuid.uuid4()), "email": owner_email, "password_hash": hash_pw(owner_password),
             "name": "GS Owner", "phone": None, "address": None, "role": "owner", "created_at": now_iso(),
         })
-        logger.info(f"Seeded owner {owner_email}")
     elif not verify_pw(owner_password, existing["password_hash"]):
         await db.users.update_one({"email": owner_email}, {"$set": {"password_hash": hash_pw(owner_password), "role": "owner"}})
-        logger.info("Owner password refreshed")
     elif existing.get("role") != "owner":
         await db.users.update_one({"email": owner_email}, {"$set": {"role": "owner"}})
-
-    # seed default cashier
-    cashier_email = "cashier@gs.com"
-    if not await db.users.find_one({"email": cashier_email}):
-        await db.users.insert_one({
-            "id": str(uuid.uuid4()), "email": cashier_email, "password_hash": hash_pw("Cashier@123"),
-            "name": "Ravi (Cashier)", "phone": None, "address": None, "role": "cashier", "created_at": now_iso(),
-        })
-        logger.info("Seeded cashier cashier@gs.com")
-
-    # seed dummy customers + orders + wishlist (10 each) if none yet
-    try:
-        await _seed_dummy_dataset()
-    except Exception as e:
-        logger.warning(f"Dummy seed skipped: {e}")
-
-
-async def _seed_dummy_dataset():
-    """Idempotent: creates ~10 test customers, 10 orders, 10 wishlist items if none exist."""
-    import random
-    if await db.users.count_documents({"role": "user"}) >= 10 and await db.orders.count_documents({}) >= 10:
-        return
-    names = [
-        ("Aarav Sharma", "aarav@example.com", "9812345601", "12 MG Road, Bengaluru"),
-        ("Priya Iyer", "priya@example.com", "9812345602", "24 Anna Nagar, Chennai"),
-        ("Rohan Verma", "rohan@example.com", "9812345603", "88 Salt Lake, Kolkata"),
-        ("Ananya Nair", "ananya@example.com", "9812345604", "31 Marine Drive, Mumbai"),
-        ("Kabir Singh", "kabir@example.com", "9812345605", "7 Connaught Place, Delhi"),
-        ("Meera Reddy", "meera@example.com", "9812345606", "45 Jubilee Hills, Hyderabad"),
-        ("Aditya Rao", "aditya@example.com", "9812345607", "9 Koregaon Park, Pune"),
-        ("Isha Kapoor", "isha@example.com", "9812345608", "63 Sector 17, Chandigarh"),
-        ("Vihaan Das", "vihaan@example.com", "9812345609", "18 Panjim Beach, Goa"),
-        ("Diya Menon", "diya@example.com", "9812345610", "22 Fort Kochi, Kerala"),
-    ]
-    user_ids = []
-    for name, em, ph, addr in names:
-        existing = await db.users.find_one({"email": em})
-        if existing:
-            user_ids.append(existing["id"]); continue
-        uid = str(uuid.uuid4())
-        await db.users.insert_one({
-            "id": uid, "email": em, "password_hash": hash_pw("Demo@1234"),
-            "name": name, "phone": ph, "address": addr, "role": "user", "created_at": now_iso(),
-        })
-        user_ids.append(uid)
-
-    products = await db.products.find({}, {"_id": 0}).limit(30).to_list(30)
-    if not products:
-        return
-
-    statuses = [
-        ("DELIVERED", "PAID", "POS", "CASH"),
-        ("DELIVERED", "PAID", "ONLINE", "UPI"),
-        ("SHIPPED", "PAID", "ONLINE", "UPI"),
-        ("SHIPPED", "UNPAID", "ONLINE", "COD"),
-        ("CONFIRMED", "PAID", "POS", "CARD"),
-        ("PENDING", "UNPAID", "ONLINE", "COD"),
-        ("DELIVERED", "PAID", "POS", "UPI"),
-        ("CONFIRMED", "PAID", "ONLINE", "UPI"),
-        ("PENDING", "PAID", "ONLINE", "UPI"),
-        ("DELIVERED", "PAID", "POS", "CASH"),
-    ]
-
-    existing_orders = await db.orders.count_documents({})
-    to_create = max(0, 10 - existing_orders)
-    now = datetime.now(timezone.utc)
-    online_idx = 0
-    for i in range(to_create):
-        st_o, st_p, channel, method = statuses[i]
-        if channel == "ONLINE":
-            u_idx = online_idx % len(user_ids)
-            online_idx += 1
-        else:
-            u_idx = i % len(user_ids)
-        picks = random.sample(products, k=min(3, len(products)))
-        items = []
-        subtotal = 0
-        for p in picks:
-            q = random.randint(1, 3)
-            sub = round(p["price"] * q, 2)
-            items.append({"product_id": p["id"], "name": p["name"], "price": p["price"], "quantity": q, "subtotal": sub})
-            subtotal += sub
-        subtotal = round(subtotal, 2)
-        tax = round(subtotal * 0.05, 2)
-        total = round(subtotal + tax, 2)
-        created = now - timedelta(hours=i * 3)
-        doc = {
-            "id": str(uuid.uuid4()),
-            "receipt_no": gen_receipt_no(),
-            "user_id": None if channel == "POS" else user_ids[u_idx],
-            "items": items,
-            "subtotal": subtotal, "tax_rate": 0.05, "tax_amount": tax, "discount": 0, "total": total,
-            "payment_method": method, "amount_paid": total if st_p == "PAID" else 0,
-            "change_due": 0,
-            "customer_name": names[u_idx][0], "customer_phone": names[u_idx][2],
-            "delivery_address": names[u_idx][3] if channel == "ONLINE" else None,
-            "channel": channel, "cashier": "Ravi (Cashier)" if channel == "POS" else None,
-            "order_status": st_o, "payment_status": st_p,
-            "status_history": [{"at": created.isoformat(), "order_status": st_o, "payment_status": st_p}],
-            "created_at": created.isoformat(),
-        }
-        await db.orders.insert_one(doc)
-
-    # wishlist: attach 1 product to each dummy user (10 items)
-    if await db.wishlist.count_documents({}) < 10:
-        for i, uid in enumerate(user_ids):
-            prod = products[i % len(products)]
-            existing = await db.wishlist.find_one({"user_id": uid, "product_id": prod["id"]})
-            if not existing:
-                await db.wishlist.insert_one({
-                    "id": str(uuid.uuid4()), "user_id": uid, "product_id": prod["id"], "added_at": now_iso(),
-                })
-    logger.info("Seeded dummy customers, orders, wishlist")
 
 
 @app.on_event("shutdown")

@@ -19,6 +19,10 @@ import AdminOrders from "./pages/AdminOrders";
 import Reports from "./pages/Reports";
 import Inventory from "./pages/Inventory";
 import Settings from "./pages/Settings";
+import Suppliers from "./pages/Suppliers";
+import Customers from "./pages/Customers";
+import Purchases from "../src/pages/Purchases";
+import AdminOffers from "./pages/AdminOffers"; // <-- Added Import for Offers/SMS
 
 function App() {
   return (
@@ -48,6 +52,10 @@ function App() {
               <Route path="/admin/orders" element={<ProtectedRoute ownerOnly><AdminOrders /></ProtectedRoute>} />
               <Route path="/admin/reports" element={<ProtectedRoute ownerOnly><Reports /></ProtectedRoute>} />
               <Route path="/admin/inventory" element={<ProtectedRoute ownerOnly><Inventory /></ProtectedRoute>} />
+              <Route path="/admin/suppliers" element={<ProtectedRoute ownerOnly><Suppliers /></ProtectedRoute>} />
+              <Route path="/admin/purchases" element={<ProtectedRoute ownerOnly><Purchases /></ProtectedRoute>} />
+              <Route path="/admin/customers" element={<ProtectedRoute ownerOnly><Customers /></ProtectedRoute>} />
+              <Route path="/admin/offers" element={<ProtectedRoute ownerOnly><AdminOffers /></ProtectedRoute>} /> {/* <-- Added Route */}
               <Route path="/admin/settings" element={<ProtectedRoute ownerOnly><Settings /></ProtectedRoute>} />
             </Route>
 

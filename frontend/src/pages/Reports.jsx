@@ -1,10 +1,21 @@
 import { useEffect, useState } from "react";
 import { fetchStats, fetchReport, money } from "../lib/api";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
-import { IndianRupee, Receipt, Package, Clock, TrendingUp } from "lucide-react";
+import { IndianRupee, Receipt, Package, Clock, TrendingUp, Users, Truck, ShoppingCart, Boxes, DollarSign, Wallet } from "lucide-react";
 
 export default function Reports() {
-  const [stats, setStats] = useState({ total_products: 0, total_orders: 0, total_revenue: 0, pending_orders: 0 });
+  const [stats, setStats] = useState({
+    total_products: 0,
+    total_customers: 0,
+    total_supplier: 0,
+    total_online_order: 0,
+    total_purchase_product: 0,
+    total_inventory_product: 0,
+    total_revenue: 0,
+    total_purchase_cost: 0,
+    total_profit: 0,
+    pending_orders: 0
+  });
   const [report, setReport] = useState({ today: [], yesterday: [], top_products: [], today_total: 0, yesterday_total: 0 });
 
   useEffect(() => {
@@ -26,11 +37,17 @@ export default function Reports() {
         <h1 className="text-3xl font-extrabold">Sales Report</h1>
       </header>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-        <StatCard icon={<IndianRupee className="w-5 h-5" />} label="Total Revenue" value={money(stats.total_revenue)} tint="from-indigo-100" />
-        <StatCard icon={<Receipt className="w-5 h-5" />} label="Total Orders" value={stats.total_orders} tint="from-emerald-100" />
-        <StatCard icon={<Clock className="w-5 h-5" />} label="Pending" value={stats.pending_orders} tint="from-amber-100" />
-        <StatCard icon={<Package className="w-5 h-5" />} label="Products" value={stats.total_products} tint="from-rose-100" />
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 mb-6">
+        <StatCard icon={<IndianRupee className="w-5 h-5" />} label="Total Revenue" value={money(stats.total_revenue)} tint="from-indigo-50" />
+        <StatCard icon={<Wallet className="w-5 h-5" />} label="Total Profit" value={money(stats.total_profit)} tint="from-emerald-100" />
+        <StatCard icon={<DollarSign className="w-5 h-5" />} label="Purchase Cost" value={money(stats.total_purchase_cost)} tint="from-rose-100" />
+        <StatCard icon={<Receipt className="w-5 h-5" />} label="Total Products" value={stats.total_products} tint="from-blue-100" />
+        <StatCard icon={<Boxes className="w-5 h-5" />} label="Inventory Stock" value={stats.total_inventory_product} tint="from-amber-100" />
+        <StatCard icon={<ShoppingCart className="w-5 h-5" />} label="Online Orders" value={stats.total_online_order} tint="from-purple-100" />
+        <StatCard icon={<Users className="w-5 h-5" />} label="Total Customers" value={stats.total_customers} tint="from-cyan-100" />
+        <StatCard icon={<Truck className="w-5 h-5" />} label="Total Suppliers" value={stats.total_supplier} tint="from-orange-100" />
+        <StatCard icon={<Package className="w-5 h-5" />} label="Purchased Items" value={stats.total_purchase_product} tint="from-teal-100" />
+        <StatCard icon={<Clock className="w-5 h-5" />} label="Pending Orders" value={stats.pending_orders} tint="from-yellow-100" />
       </div>
 
       <div className="glass-strong p-6 mb-6">
@@ -104,9 +121,17 @@ export default function Reports() {
 
 function StatCard({ icon, label, value, tint }) {
   return (
-    <div className={`glass p-4 bg-gradient-to-b ${tint} to-white`}>
-      <div className="flex items-center gap-2 text-slate-600 text-sm">{icon}<span>{label}</span></div>
-      <div className="mt-3 text-2xl md:text-3xl font-mono-num font-extrabold">{value}</div>
+    <div className={`glass p-4 bg-gradient-to-b ${tint} to-white flex flex-col justify-between overflow-hidden`}>
+      <div className="flex items-center gap-2 text-slate-600 text-xs md:text-sm truncate">
+        {icon}
+        <span className="truncate">{label}</span>
+      </div>
+      <div 
+        className="mt-3 font-mono-num font-extrabold tracking-tight text-lg md:text-xl xl:text-2xl truncate"
+        title={value}
+      >
+        {value}
+      </div>
     </div>
   );
 }

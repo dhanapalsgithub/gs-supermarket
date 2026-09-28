@@ -1,9 +1,48 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
-import { Package, Search, Heart, ShoppingCart, Filter } from "lucide-react";
+import { Package, Search, Heart, ShoppingCart, Filter, Megaphone, Tag } from "lucide-react";
 import { fetchProducts, fetchCategories, money, catTint, catLabel, addWishlist, fetchWishlist } from "../lib/api";
 import { useAuth, useCart } from "../context/AuthContext";
+
+// 1. ஆஃபர் பேனர் காம்போனென்ட் (Offers Banner Component)
+function UserOffersBanner() {
+  const [offers, setOffers] = useState([]);
+
+  useEffect(() => {
+    fetch("/api/offers/active")
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data)) setOffers(data);
+      })
+      .catch(() => {});
+  }, []);
+
+  if (offers.length === 0) return null;
+
+  return (
+    <div className="mb-6 space-y-3">
+      {offers.map((offer) => (
+        <div 
+          key={offer.id || offer.created_at} 
+          className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white p-4 rounded-2xl shadow-md flex items-start gap-3"
+        >
+          <div className="bg-white/20 p-2 rounded-xl mt-0.5">
+            <Megaphone className="w-5 h-5 text-white animate-pulse" />
+          </div>
+          <div className="flex-1">
+            <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-indigo-200 mb-1">
+              <Tag className="w-3.5 h-3.5" /> சிறப்பு சலுகை (Special Offer)
+            </div>
+            <p className="text-sm font-medium leading-relaxed">
+              {offer.message}
+            </p>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export default function Shop() {
   const [products, setProducts] = useState([]);
@@ -42,6 +81,9 @@ export default function Shop() {
 
   return (
     <div className="max-w-7xl mx-auto p-4 md:p-8">
+      {/* 2. வாடிக்கையாளர் ஷாப் பக்கத்தின் தொடக்கத்தில் ஆஃபர் பேனர் சேர்க்கப்பட்டுள்ளது */}
+      <UserOffersBanner />
+
       <header className="mb-6 flex items-end justify-between flex-wrap gap-4">
         <div>
           <div className="label-cap">Storefront</div>

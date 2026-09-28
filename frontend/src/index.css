@@ -184,6 +184,25 @@ body::before {
   .receipt-58 { position: absolute; left: 0; top: 0; box-shadow: none !important; }
 }
 
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  [data-testid="receipt-modal"], [data-testid="receipt-modal"] * {
+    visibility: visible;
+  }
+  [data-testid="receipt-modal"] {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    background: white !important;
+  }
+  /* Hide close and print buttons from actual paper printout */
+  button, .absolute {
+    display: none !important;
+  }
+}
 /* Shadcn tokens - light */
 @layer base {
   :root {

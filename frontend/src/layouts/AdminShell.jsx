@@ -1,6 +1,6 @@
 import { NavLink, Outlet, useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { LayoutGrid, ClipboardList, BarChart3, Boxes, LogOut, ShoppingBag, Settings } from "lucide-react";
+import { LayoutGrid, ClipboardList, BarChart3, Boxes, LogOut, ShoppingBag, Settings, Users, Truck, Receipt,Megaphone } from "lucide-react";
 import GSLogo from "../components/GSLogo";
 import Footer from "../components/Footer";
 
@@ -11,10 +11,14 @@ export default function AdminShell() {
   const allLinks = [
     { to: "/admin/pos", icon: LayoutGrid, label: "POS", tid: "admin-nav-pos", roles: ["owner", "cashier"] },
     { to: "/admin/orders", icon: ClipboardList, label: "Orders", tid: "admin-nav-orders", roles: ["owner"] },
-    { to: "/admin/reports", icon: BarChart3, label: "Reports", tid: "admin-nav-reports", roles: ["owner"] },
+    { to: "/admin/customers", icon: Users, label: "Customers", tid: "admin-nav-customers", roles: ["owner"] },
+    { to: "/admin/suppliers", icon: Truck, label: "Suppliers", tid: "admin-nav-suppliers", roles: ["owner"] },
+    { to: "/admin/purchases", icon: Receipt, label: "Purchases", tid: "admin-nav-purchases", roles: ["owner"] },
     { to: "/admin/inventory", icon: Boxes, label: "Inventory", tid: "admin-nav-inventory", roles: ["owner"] },
+    { to: "/admin/reports", icon: BarChart3, label: "Reports", tid: "admin-nav-reports", roles: ["owner"] },
+    { to: "/admin/offers", icon: Megaphone, label: "Offers & SMS", tid: "admin-nav-offers", roles: ["owner"] },
     { to: "/admin/settings", icon: Settings, label: "Settings", tid: "admin-nav-settings", roles: ["owner"] },
-  ];
+];
   const links = allLinks.filter((l) => l.roles.includes(user?.role));
 
   const roleLabel = isOwner ? "Owner" : "Cashier";

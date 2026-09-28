@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { fetchProducts, fetchCategories, createProduct, updateProduct, deleteProduct, importProductsCsv, money } from "../lib/api";
-import { Plus, Pencil, Trash2, Package, Search, Upload, Download, X } from "lucide-react";
+import { Plus, Pencil, Trash2, Package, Search, Upload, Download, X, AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
 
 const empty = { name: "", category: "GROCERY", price: 0, stock: 0, barcode: "", unit: "pcs" };
+const LOW_STOCK_THRESHOLD = 10; // குறைந்த இருப்பு எச்சரிக்கை வரம்பு
+const PAGE_SIZE = 10; // ஒரு பக்கத்திற்கு 10 பொருட்கள்
 
 export default function Inventory() {
   const [products, setProducts] = useState([]);
@@ -12,6 +14,7 @@ export default function Inventory() {
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(empty);
   const [showForm, setShowForm] = useState(false);
+  const [page, setPage] = useState(1);
   const fileRef = useRef(null);
 
   const load = () => {
@@ -24,6 +27,13 @@ export default function Inventory() {
     const t = q.trim().toLowerCase();
     return !t || p.name.toLowerCase().includes(t) || (p.barcode || "").includes(t);
   });
+
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE) || 1;
+  const paginatedProducts = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  useEffect(() => {
+    setPage(1);
+  }, [q]);
 
   const openNew = () => { setEditing(null); setForm(empty); setShowForm(true); };
   const openEdit = (p) => { setEditing(p); setForm({ name: p.name, category: p.category, price: p.price, stock: p.stock, barcode: p.barcode || "", unit: p.unit || "pcs" }); setShowForm(true); };
@@ -43,6 +53,23 @@ export default function Inventory() {
     if (!window.confirm(`Delete ${p.name}?`)) return;
     await deleteProduct(p.id);
     toast.success("Deleted"); load();
+  };
+
+  const handleAutoDeductStock = async (productId, soldQuantity) => {
+    try {
+      const product = products.find(p => p.id === productId);
+      if (!product) return;
+      
+      const newStock = Math.max(0, product.stock - soldQuantity);
+      await updateProduct(productId, { ...product, stock: newStock });
+      
+      if (newStock <= LOW_STOCK_THRESHOLD) {
+        toast.warning(`Low stock alert for ${product.name}! Remaining: ${newStock}`);
+      }
+      load();
+    } catch {
+      toast.error("Failed to auto-deduct stock");
+    }
   };
 
   const onImport = async (e) => {
@@ -91,33 +118,81 @@ export default function Inventory() {
 
       <div className="glass overflow-hidden">
         <div className="grid grid-cols-12 px-4 py-3 label-cap border-b border-white/50">
-          <div className="col-span-5">Product</div>
+          <div className="col-span-4">Product</div>
           <div className="col-span-2">Category</div>
           <div className="col-span-2 font-mono-num">Barcode</div>
           <div className="col-span-1 text-right">Stock</div>
           <div className="col-span-1 text-right">Price</div>
-          <div className="col-span-1"></div>
+          <div className="col-span-2 text-center">Actions</div>
         </div>
-        <div className="divide-y divide-white/60 max-h-[65vh] overflow-y-auto">
-          {filtered.map((p) => (
-            <div key={p.id} className="grid grid-cols-12 items-center px-4 py-3 hover:bg-white/50">
-              <div className="col-span-5 flex items-center gap-3 min-w-0">
-                <div className="w-9 h-9 rounded-lg bg-white border border-slate-200 flex items-center justify-center"><Package className="w-4 h-4 text-slate-400" /></div>
-                <span className="text-sm font-medium truncate">{p.name}</span>
+        <div className="divide-y divide-white/60">
+          {paginatedProducts.map((p) => {
+            const isLowStock = p.stock <= LOW_STOCK_THRESHOLD;
+            return (
+              <div key={p.id} className="grid grid-cols-12 items-center px-4 py-3 hover:bg-white/50">
+                <div className="col-span-4 flex items-center gap-3 min-w-0">
+                  <div className="w-9 h-9 rounded-lg bg-white border border-slate-200 flex items-center justify-center relative">
+                    <Package className="w-4 h-4 text-slate-400" />
+                    {isLowStock && (
+                      <span className="absolute -top-1 -right-1 w-3 h-3 bg-rose-500 rounded-full border-2 border-white" title="Low Stock"></span>
+                    )}
+                  </div>
+                  <div className="truncate">
+                    <span className="text-sm font-medium truncate block">{p.name}</span>
+                    {isLowStock && (
+                      <span className="text-[10px] text-rose-500 font-semibold flex items-center gap-1">
+                        <AlertTriangle className="w-3 h-3" /> Low Stock ({p.stock})
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="col-span-2 text-xs text-slate-500">{p.category}</div>
+                <div className="col-span-2 text-xs font-mono-num text-slate-500 truncate">{p.barcode}</div>
+                <div className={`col-span-1 text-right text-sm font-mono-num ${isLowStock ? 'text-rose-600 font-bold' : ''}`}>
+                  {Math.floor(p.stock)}
+                </div>
+                <div className="col-span-1 text-right text-sm font-mono-num font-bold text-indigo-600">{money(p.price)}</div>
+                <div className="col-span-2 flex justify-end gap-1">
+                  <button 
+                    onClick={() => handleAutoDeductStock(p.id, 1)} 
+                    className="text-[10px] bg-indigo-50 text-indigo-600 px-2 py-1 rounded hover:bg-indigo-100 font-medium"
+                    title="Simulate Billing Deduction"
+                  >
+                    Sell 1
+                  </button>
+                  <button onClick={() => openEdit(p)} data-testid={`edit-${p.id}`} className="p-2 rounded-lg hover:bg-white text-slate-500"><Pencil className="w-4 h-4" /></button>
+                  <button onClick={() => remove(p)} data-testid={`del-${p.id}`} className="p-2 rounded-lg hover:bg-white text-rose-500"><Trash2 className="w-4 h-4" /></button>
+                </div>
               </div>
-              <div className="col-span-2 text-xs text-slate-500">{p.category}</div>
-              <div className="col-span-2 text-xs font-mono-num text-slate-500 truncate">{p.barcode}</div>
-              <div className="col-span-1 text-right text-sm font-mono-num">{Math.floor(p.stock)}</div>
-              <div className="col-span-1 text-right text-sm font-mono-num font-bold text-indigo-600">{money(p.price)}</div>
-              <div className="col-span-1 flex justify-end gap-1">
-                <button onClick={() => openEdit(p)} data-testid={`edit-${p.id}`} className="p-2 rounded-lg hover:bg-white text-slate-500"><Pencil className="w-4 h-4" /></button>
-                <button onClick={() => remove(p)} data-testid={`del-${p.id}`} className="p-2 rounded-lg hover:bg-white text-rose-500"><Trash2 className="w-4 h-4" /></button>
-              </div>
-            </div>
-          ))}
-          {filtered.length === 0 && <div className="p-10 text-center text-slate-500">No products</div>}
+            );
+          })}
+          {paginatedProducts.length === 0 && <div className="p-10 text-center text-slate-500">No products</div>}
         </div>
       </div>
+
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between mt-4 px-2">
+          <div className="text-xs text-slate-500">
+            Showing page {page} of {totalPages} ({filtered.length} products total)
+          </div>
+          <div className="flex gap-2">
+            <button 
+              onClick={() => setPage(p => Math.max(p - 1, 1))} 
+              disabled={page === 1}
+              className="btn-ghost h-9 px-3 rounded-lg flex items-center gap-1 disabled:opacity-50"
+            >
+              <ChevronLeft className="w-4 h-4" /> Prev
+            </button>
+            <button 
+              onClick={() => setPage(p => Math.min(p + 1, totalPages))} 
+              disabled={page === totalPages}
+              className="btn-ghost h-9 px-3 rounded-lg flex items-center gap-1 disabled:opacity-50"
+            >
+              Next <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {showForm && (
         <div data-testid="product-form-modal" className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
