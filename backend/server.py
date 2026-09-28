@@ -309,7 +309,7 @@ async def list_customers(_: dict = Depends(require_staff)):
         if "id" not in c:
             c["id"] = str(uuid.uuid4())
     return {
-        "online": [c for c in customers if c.get("type") == "ONLINE" or c.get("channel"] == "ONLINE"],
+        "online": [c for c in customers if c.get("type") == "ONLINE" or c.get("channel") == "ONLINE"],
         "walking": [c for c in customers if c not in [x for x in customers if x.get("type") == "ONLINE"]]
     }
 
