@@ -824,8 +824,7 @@ async def root():
     return {"message": "GS Billing API", "brand": "GS", "built_by": "R I Billing Pro", "pos_name": "GS"}
 
 
-app.include_router(api)
-
+# 1. முதலில் CORS மிடில்வேரைச் சேர்க்க வேண்டும்
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
@@ -833,6 +832,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# 2. அதன் பிறகு ரூட்டரைச் சேர்க்க வேண்டும்
+app.include_router(api)
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
