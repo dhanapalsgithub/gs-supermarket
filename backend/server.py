@@ -276,10 +276,17 @@ async def update_profile(payload: ProfileUpdate, user: dict = Depends(get_curren
 @api.get("/customers")
 async def list_customers(_: dict = Depends(require_staff)):
     customers = await db.customers.find({}, {"_id": 0}).to_list(1000)
+    online = []
+    walking = []
     for c in customers:
         if "id" not in c:
             c["id"] = str(uuid.uuid4())
-    return customers
+        # channel அல்லது type ஆன்லைன் என்றால் ஆன்லைன் கஸ்டமர், மற்றபடி walking
+        if c.get("channel") == "ONLINE" or c.get("type") == "ONLINE":
+            online.append(c)
+        else:
+            walking.append(c)
+    return {"online": online, "walking": walking}
 
 @api.post("/customers")
 async def create_customer(payload: CustomerCreate, _: dict = Depends(require_staff)):
