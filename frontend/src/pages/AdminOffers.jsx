@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Send, Megaphone, CheckCircle2, Trash2, Edit3, X } from "lucide-react";
 import { toast } from "sonner";
-import { api, broadcastOffer, fetchActiveOffers, updateOffer, deleteOffer } from "./api"; // api.js இலிருந்து இறக்குமதி செய்தல்
+import { api, fetchActiveOffers, broadcastOffer, updateOffer, deleteOffer } from "./api"; // api.js இலிருந்து இறக்குமதி செய்தல்
 
 export default function AdminOffers() {
   const [message, setMessage] = useState("");
@@ -20,7 +20,7 @@ export default function AdminOffers() {
   const loadOffers = async () => {
     try {
       const data = await fetchActiveOffers();
-      setOffers(data);
+      setOffers(data || []);
     } catch (err) {
       console.error("Failed to load offers", err);
       toast.error("ஆஃபர்களை ஏற்றுவதில் தோல்வி ஏற்பட்டது");
@@ -28,7 +28,7 @@ export default function AdminOffers() {
   };
 
   // புதிய ஆஃபர் Broadcast செய்ய
- const handleBroadcast = async (e) => {
+  const handleBroadcast = async (e) => {
     e.preventDefault();
     if (!message.trim()) return;
 
@@ -38,17 +38,13 @@ export default function AdminOffers() {
     setResult(null);
 
     try {
-      // api.js-ல் உள்ள broadcastOffer-ஐ நேரடியாகப் பயன்படுத்துதல்
       const data = await broadcastOffer({ message });
-      
-      // சர்வர் வெற்றிகரமாக டேட்டாவைத் தந்தால்
       setResult(data || { total_targeted: 0, sent: 0 });
       setMessage("");
       loadOffers(); // பட்டியலைப் புதுப்பிக்க
       toast.success("ஆஃபர் வெற்றிகரமாக அனுப்பப்பட்டது");
     } catch (err) {
-      console.error("Broadcast Error:", err);
-      // நெட்வொர்க் பிழை அல்லது பேக்எண்ட் தரும் பிழையைக் காட்டுதல்
+      console.error("Broadcast error:", err);
       const errorMsg = err.response?.data?.detail || err.message || "ஆஃபர் அனுப்புவதில் தோல்வி ஏற்பட்டது";
       toast.error(errorMsg);
     } finally {
