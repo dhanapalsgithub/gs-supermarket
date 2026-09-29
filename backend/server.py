@@ -189,6 +189,10 @@ class OrderCreate(BaseModel):
     channel: Literal["POS", "ONLINE"] = "POS"
     cashier: Optional[str] = "Cashier"
 
+class OrderStatusUpdate(BaseModel):
+    order_status: Optional[str] = None
+    payment_status: Optional[str] = None
+
 class RegisterInput(BaseModel):
     email: EmailStr
     password: str
@@ -391,6 +395,24 @@ async def create_order(payload: OrderCreate, request: Request):
 @api.get("/orders")
 async def list_orders(request: Request, limit: int = 200):
     return await db.orders.find({}, {"_id": 0}).sort("created_at", -1).to_list(limit)
+
+@api.patch("/orders/{oid}/status")
+async def update_order_status(oid: str, payload: OrderStatusUpdate, _: dict = Depends(require_staff)):
+    updates = {k: v for k, v in payload.model_dump().items() if v is not None}
+    if not updates:
+        raise HTTPException(status_code=400, detail="No updates provided")
+    
+    order = await db.orders.find_one({"id": oid})
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+        
+    updates["status_history"] = order.get("status_history", []) + [{"at": now_iso(), **updates}]
+    
+    r = await db.orders.update_one({"id": oid}, {"$set": updates})
+    if r.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Order not found")
+    
+    return await db.orders.find_one({"id": oid}, {"_id": 0})
 
 # ---------- settings endpoints ----------
 @api.get("/settings")
