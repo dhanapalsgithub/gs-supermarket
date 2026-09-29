@@ -31,7 +31,7 @@ app = FastAPI(title="CashierPro API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # அனைத்து டொமைன்களையும் அனுமதிக்க (அல்லது env மூலம்)
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -108,7 +108,7 @@ class SettingsUpdate(BaseModel):
     payment_gateway: Optional[Literal["SIMULATED", "STRIPE", "RAZORPAY"]] = None
     sms_provider: Optional[str] = None
 
-class BroadcastOfferInput(BaseModel):
+class OfferBroadcastInput(BaseModel):
     message: str
 
 async def send_sms(phone: str, body: str) -> bool:
@@ -136,32 +136,6 @@ async def send_sms(phone: str, body: str) -> bool:
     except Exception as e:
         logger.warning(f"[SMS failed] {to}: {e}")
         return False
-
-async def maybe_notify_status_change(order: dict, new_order_status: Optional[str], new_payment_status: Optional[str]):
-    settings = await get_settings()
-    if not settings.get("sms_enabled"):
-        return
-    phone = order.get("customer_phone")
-    if not phone:
-        return
-    store = "GS Supermarket"
-    parts = []
-    if new_order_status == "SHIPPED":
-        parts.append(f"Your order {order['receipt_no']} has been SHIPPED and is on the way.")
-    if new_order_status == "DELIVERED":
-        parts.append(f"Your order {order['receipt_no']} was DELIVERED. Thank you for shopping at {store}!")
-    if new_order_status == "CANCELLED":
-        parts.append(f"Your order {order['receipt_no']} was CANCELLED. Contact {store} for details.")
-    if new_payment_status == "PAID":
-        parts.append(f"Payment received for {order['receipt_no']} — Rs{order['total']:.2f}. Thank you!")
-    if not parts:
-        return
-    body = " ".join(parts)
-    sent = await send_sms(phone, body)
-    await db.orders.update_one(
-        {"id": order["id"]},
-        {"$push": {"status_history": {"at": now_iso(), "event": "SMS", "sent": sent, "body": body[:160]}}},
-    )
 
 # ---------- models ----------
 class Product(BaseModel):
@@ -192,15 +166,6 @@ class ProductCreate(BaseModel):
     unit: Optional[str] = "pcs"
     image_hint: Optional[str] = None
 
-class ProductUpdate(BaseModel):
-    name: Optional[str] = None
-    category: Optional[str] = None
-    price: Optional[float] = None
-    stock: Optional[float] = None
-    barcode: Optional[str] = None
-    unit: Optional[str] = None
-    image_hint: Optional[str] = None
-
 class SaleItem(BaseModel):
     product_id: str
     name: str
@@ -224,10 +189,6 @@ class OrderCreate(BaseModel):
     channel: Literal["POS", "ONLINE"] = "POS"
     cashier: Optional[str] = "Cashier"
 
-class OrderStatusUpdate(BaseModel):
-    order_status: Optional[Literal["PENDING", "CONFIRMED", "SHIPPED", "DELIVERED", "CANCELLED"]] = None
-    payment_status: Optional[Literal["UNPAID", "PAID", "REFUNDED"]] = None
-
 class RegisterInput(BaseModel):
     email: EmailStr
     password: str
@@ -246,9 +207,6 @@ class ProfileUpdate(BaseModel):
     name: Optional[str] = None
     phone: Optional[str] = None
     address: Optional[str] = None
-
-class OfferBroadcastInput(BaseModel):
-    message: str
 
 class CustomerCreate(BaseModel):
     name: str
@@ -308,10 +266,7 @@ async def list_customers(_: dict = Depends(require_staff)):
     for c in customers:
         if "id" not in c:
             c["id"] = str(uuid.uuid4())
-    return {
-        "online": [c for c in customers if c.get("type") == "ONLINE" or c.get("channel") == "ONLINE"],
-        "walking": [c for c in customers if c not in [x for x in customers if x.get("type") == "ONLINE"]]
-    }
+    return customers
 
 @api.post("/customers")
 async def create_customer(payload: CustomerCreate, _: dict = Depends(require_staff)):
@@ -350,6 +305,16 @@ async def create_product(payload: ProductCreate, _: dict = Depends(require_owner
     await db.products.insert_one(prod.model_dump())
     return prod
 
+@api.delete("/products/{pid}")
+async def delete_product(pid: str, _: dict = Depends(require_owner)):
+    r = await db.products.delete_one({"id": pid})
+    return {"deleted": r.deleted_count}
+
+@api.get("/categories")
+async def list_categories():
+    return sorted(await db.products.distinct("category"))
+
+# ---------- offers & broadcast endpoints ----------
 @api.post("/admin/broadcast-offer")
 async def broadcast_offer(payload: OfferBroadcastInput, _: dict = Depends(require_owner)):
     offer_doc = {"id": str(uuid.uuid4()), "message": payload.message, "created_at": now_iso()}
@@ -363,7 +328,14 @@ async def broadcast_offer(payload: OfferBroadcastInput, _: dict = Depends(requir
 
 @api.get("/offers/active")
 async def get_active_offers():
-    return await db.offers.find({}, {"_id": 0}).sort("created_at", -1).limit(5).to_list(5)
+    return await db.offers.find({}, {"_id": 0}).sort("created_at", -1).limit(10).to_list(10)
+
+@api.put("/admin/offers/{oid}")
+async def update_offer(oid: str, payload: OfferBroadcastInput, _: dict = Depends(require_owner)):
+    r = await db.offers.update_one({"id": oid}, {"$set": {"message": payload.message}})
+    if r.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Offer not found")
+    return {"ok": True}
 
 @api.delete("/admin/offers/{oid}")
 async def delete_offer(oid: str, _: dict = Depends(require_owner)):
@@ -371,15 +343,6 @@ async def delete_offer(oid: str, _: dict = Depends(require_owner)):
     if r.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Offer not found")
     return {"ok": True}
-
-@api.delete("/products/{pid}")
-async def delete_product(pid: str, _: dict = Depends(require_owner)):
-    r = await db.products.delete_one({"id": pid})
-    return {"deleted": r.deleted_count}
-
-@api.get("/categories")
-async def list_categories():
-    return sorted(await db.products.distinct("category"))
 
 # ---------- purchases endpoints ----------
 @api.get("/purchases")
@@ -426,7 +389,7 @@ async def create_order(payload: OrderCreate, request: Request):
     return {k: v for k, v in doc.items() if k != "_id"}
 
 @api.get("/orders")
-async def list_orders(request: Request, mine: bool = False, limit: int = 200):
+async def list_orders(request: Request, limit: int = 200):
     return await db.orders.find({}, {"_id": 0}).sort("created_at", -1).to_list(limit)
 
 # ---------- settings endpoints ----------
@@ -477,7 +440,6 @@ async def stats_summary():
 async def root():
     return {"message": "GS Billing API", "brand": "GS", "built_by": "R I Billing Pro"}
 
-# 🔗 ஒற்றை ரூட்டர் இணைப்பு (Single Router Inclusion)
 app.include_router(api)
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
