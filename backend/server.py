@@ -107,6 +107,15 @@ class SettingsUpdate(BaseModel):
     sms_enabled: Optional[bool] = None
     payment_gateway: Optional[Literal["SIMULATED", "STRIPE", "RAZORPAY"]] = None
     sms_provider: Optional[str] = None
+    
+class ProductCreate(BaseModel):
+    name: str
+    category: str
+    price: float
+    stock: float = 0
+    barcode: Optional[str] = None
+    unit: Optional[str] = "pcs"
+    image_hint: Optional[str] = None
 
 class OfferBroadcastInput(BaseModel):
     message: str

@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import { fetchProducts, fetchCategories, createProduct, updateProduct, deleteProduct, importProductsCsv, money } from "../lib/api";
 import { Plus, Pencil, Trash2, Package, Search, Upload, Download, X, AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
 
-const empty = { name: "", category: "GROCERY", price: 0, stock: 0, barcode: "", unit: "pcs" };
+const empty = { name: "", category: "GROCERY", price: 0, stock: 0, barcode: "", unit: "pcs", image_hint: "" };
 const LOW_STOCK_THRESHOLD = 10; // குறைந்த இருப்பு எச்சரிக்கை வரம்பு
 const PAGE_SIZE = 10; // ஒரு பக்கத்திற்கு 10 பொருட்கள்
 
@@ -36,7 +36,19 @@ export default function Inventory() {
   }, [q]);
 
   const openNew = () => { setEditing(null); setForm(empty); setShowForm(true); };
-  const openEdit = (p) => { setEditing(p); setForm({ name: p.name, category: p.category, price: p.price, stock: p.stock, barcode: p.barcode || "", unit: p.unit || "pcs" }); setShowForm(true); };
+  const openEdit = (p) => { 
+    setEditing(p); 
+    setForm({ 
+      name: p.name, 
+      category: p.category, 
+      price: p.price, 
+      stock: p.stock, 
+      barcode: p.barcode || "", 
+      unit: p.unit || "pcs",
+      image_hint: p.image_hint || "" 
+    }); 
+    setShowForm(true); 
+  };
 
   const save = async (e) => {
     e.preventDefault();
@@ -84,7 +96,7 @@ export default function Inventory() {
   };
 
   const downloadTemplate = () => {
-    const csv = "name,category,price,stock,barcode,unit\nSample Product,GROCERY,50.00,25,123456,PC\n";
+    const csv = "name,category,price,stock,barcode,unit,image_hint\nSample Product,GROCERY,50.00,25,123456,PC,sample.png\n";
     const blob = new Blob([csv], { type: "text/csv" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob); a.download = "product_template.csv"; a.click();
@@ -131,8 +143,12 @@ export default function Inventory() {
             return (
               <div key={p.id} className="grid grid-cols-12 items-center px-4 py-3 hover:bg-white/50">
                 <div className="col-span-4 flex items-center gap-3 min-w-0">
-                  <div className="w-9 h-9 rounded-lg bg-white border border-slate-200 flex items-center justify-center relative">
-                    <Package className="w-4 h-4 text-slate-400" />
+                  <div className="w-9 h-9 rounded-lg bg-white border border-slate-200 flex items-center justify-center relative overflow-hidden">
+                    {p.image_hint ? (
+                      <img src={p.image_hint} alt={p.name} className="w-full h-full object-cover" onError={(e)=>{e.target.style.display='none'}} />
+                    ) : (
+                      <Package className="w-4 h-4 text-slate-400" />
+                    )}
                     {isLowStock && (
                       <span className="absolute -top-1 -right-1 w-3 h-3 bg-rose-500 rounded-full border-2 border-white" title="Low Stock"></span>
                     )}
@@ -196,10 +212,12 @@ export default function Inventory() {
 
       {showForm && (
         <div data-testid="product-form-modal" className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
-          <form onSubmit={save} className="w-full max-w-md glass-strong p-6 space-y-3 relative">
+          <form onSubmit={save} className="w-full max-w-md glass-strong p-6 space-y-3 relative max-h-[90vh] overflow-y-auto">
             <button type="button" onClick={() => setShowForm(false)} className="absolute top-3 right-3 p-2 rounded-lg hover:bg-slate-100"><X className="w-4 h-4" /></button>
             <div className="text-lg font-extrabold mb-2">{editing ? "Edit Product" : "New Product"}</div>
+            
             <Field label="Name"><input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="field" data-testid="form-name" /></Field>
+            
             <div className="grid grid-cols-2 gap-3">
               <Field label="Category">
                 <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} className="field" data-testid="form-category">
@@ -210,11 +228,23 @@ export default function Inventory() {
               </Field>
               <Field label="Unit"><input value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} className="field" /></Field>
             </div>
+
             <div className="grid grid-cols-2 gap-3">
               <Field label="Price (₹)"><input required type="number" step="0.01" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} className="field font-mono-num" data-testid="form-price" /></Field>
               <Field label="Stock"><input type="number" value={form.stock} onChange={(e) => setForm({ ...form, stock: e.target.value })} className="field font-mono-num" /></Field>
             </div>
+
             <Field label="Barcode"><input value={form.barcode} onChange={(e) => setForm({ ...form, barcode: e.target.value })} className="field font-mono-num" data-testid="form-barcode" /></Field>
+
+            <Field label="Image URL / Hint">
+              <input 
+                value={form.image_hint} 
+                onChange={(e) => setForm({ ...form, image_hint: e.target.value })} 
+                placeholder="Enter image URL or filename" 
+                className="field" 
+              />
+            </Field>
+
             <div className="flex gap-2 pt-2">
               <button type="button" onClick={() => setShowForm(false)} className="btn-ghost flex-1 h-11 rounded-lg">Cancel</button>
               <button type="submit" data-testid="form-save" className="btn-primary flex-1 h-11 rounded-lg">Save</button>
