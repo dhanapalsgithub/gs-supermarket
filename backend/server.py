@@ -388,8 +388,29 @@ async def create_order(payload: OrderCreate, request: Request):
         "created_at": now_iso(),
     }
     await db.orders.insert_one(doc)
+
+    # கஸ்டமர் போன் நம்பர் இருந்தால் அவர்களை customers டேட்டாபேஸில் சேமிக்க / அப்டேட் செய்ய
+    if payload.customer_phone:
+        await db.customers.update_one(
+            {"phone": payload.customer_phone},
+            {
+                "$set": {
+                    "name": payload.customer_name or "Customer",
+                    "phone": payload.customer_phone,
+                    "type": payload.channel,
+                    "updated_at": now_iso()
+                },
+                "$setOnInsert": {
+                    "id": str(uuid.uuid4()),
+                    "created_at": now_iso()
+                }
+            },
+            upsert=True
+        )
+
     for it in payload.items:
         await db.products.update_one({"id": it.product_id}, {"$inc": {"stock": -it.quantity}})
+        
     return {k: v for k, v in doc.items() if k != "_id"}
 
 @api.get("/orders")
