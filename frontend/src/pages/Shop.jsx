@@ -5,38 +5,25 @@ import { Package, Search, Heart, ShoppingCart, Filter, Megaphone, Tag } from "lu
 import { fetchProducts, fetchCategories, money, catTint, catLabel, addWishlist, fetchWishlist } from "../lib/api";
 import { useAuth, useCart } from "../context/AuthContext";
 
-// 1. ஆஃபர் பேனர் காம்போனென்ட் (Offers Banner Component)
 function UserOffersBanner() {
   const [offers, setOffers] = useState([]);
-
   useEffect(() => {
     fetch("/api/offers/active")
       .then((res) => res.json())
-      .then((data) => {
-        if (Array.isArray(data)) setOffers(data);
-      })
+      .then((data) => { if (Array.isArray(data)) setOffers(data); })
       .catch(() => {});
   }, []);
-
   if (offers.length === 0) return null;
-
   return (
     <div className="mb-6 space-y-3">
       {offers.map((offer) => (
-        <div 
-          key={offer.id || offer.created_at} 
-          className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white p-4 rounded-2xl shadow-md flex items-start gap-3"
-        >
-          <div className="bg-white/20 p-2 rounded-xl mt-0.5">
-            <Megaphone className="w-5 h-5 text-white animate-pulse" />
-          </div>
+        <div key={offer.id || offer.created_at} className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white p-4 rounded-2xl shadow-md flex items-start gap-3">
+          <div className="bg-white/20 p-2 rounded-xl mt-0.5"><Megaphone className="w-5 h-5 text-white animate-pulse" /></div>
           <div className="flex-1">
             <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-indigo-200 mb-1">
-              <Tag className="w-3.5 h-3.5" /> சிறப்பு சலுகை (Special Offer)
+              <Tag className="w-3.5 h-3.5" /> Special Offer
             </div>
-            <p className="text-sm font-medium leading-relaxed">
-              {offer.message}
-            </p>
+            <p className="text-sm font-medium leading-relaxed">{offer.message}</p>
           </div>
         </div>
       ))}
@@ -49,7 +36,7 @@ export default function Shop() {
   const [cats, setCats] = useState([]);
   const [activeCat, setActiveCat] = useState("ALL");
   const [q, setQ] = useState("");
-  const [wish, setWish] = useState({}); // product_id → true
+  const [wish, setWish] = useState({});
   const { user } = useAuth();
   const { add, items } = useCart();
 
@@ -81,87 +68,52 @@ export default function Shop() {
 
   return (
     <div className="max-w-7xl mx-auto p-4 md:p-8">
-      {/* 2. வாடிக்கையாளர் ஷாப் பக்கத்தின் தொடக்கத்தில் ஆஃபர் பேனர் சேர்க்கப்பட்டுள்ளது */}
       <UserOffersBanner />
-
       <header className="mb-6 flex items-end justify-between flex-wrap gap-4">
         <div>
           <div className="label-cap">Storefront</div>
           <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight">Fresh picks for your kitchen</h1>
-          <p className="text-slate-500 mt-1 text-sm">Free delivery over ₹499 · Pay on delivery or UPI</p>
         </div>
         <div className="relative w-full md:w-96">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <input
-            value={q} onChange={(e) => setQ(e.target.value)}
-            data-testid="shop-search"
-            placeholder="Search groceries, snacks, brands…"
-            className="field field-lg pl-10"
-          />
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search groceries..." className="field field-lg pl-10" />
         </div>
       </header>
 
-      {/* Categories */}
       <div className="flex gap-2 overflow-x-auto pb-3 mb-4">
         {["ALL", ...cats].map((c) => (
-          <button
-            key={c}
-            data-testid={`shop-cat-${c}`}
-            onClick={() => setActiveCat(c)}
-            className={`chip whitespace-nowrap ${activeCat === c ? "chip-on" : "chip-off"}`}
-          >
+          <button key={c} onClick={() => setActiveCat(c)} className={`chip whitespace-nowrap ${activeCat === c ? "chip-on" : "chip-off"}`}>
             {catLabel(c)}
           </button>
         ))}
       </div>
 
-      {/* Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
         {filtered.map((p) => {
           const cart = inCart(p.id);
           return (
-            <div key={p.id} data-testid={`shop-product-${p.id}`} className={`glass glass-hover p-4 relative ${catTint(p.category)}`}>
-              <button
-                onClick={() => toggleWish(p)}
-                data-testid={`wish-${p.id}`}
-                className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/80 border border-white flex items-center justify-center hover:scale-110 transition-transform"
-              >
+            <div key={p.id} className={`glass glass-hover p-4 relative ${catTint(p.category)}`}>
+              <button onClick={() => toggleWish(p)} className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/85 flex items-center justify-center z-10">
                 <Heart className={`w-4 h-4 ${wish[p.id] ? "fill-rose-500 text-rose-500" : "text-slate-500"}`} />
               </button>
-              <div className="aspect-square rounded-xl bg-white/60 border border-white/70 flex items-center justify-center mb-3">
-                <Package className="w-10 h-10 text-slate-400" />
+              <div className="aspect-square rounded-xl bg-white/60 border border-white/70 flex items-center justify-center mb-3 overflow-hidden relative">
+                {p.image_hint ? (
+                  <img src={p.image_hint} alt={p.name} className="w-full h-full object-cover" onError={(e)=>{e.target.style.display='none'}} />
+                ) : (
+                  <Package className="w-10 h-10 text-slate-400" />
+                )}
               </div>
               <div className="label-cap">{catLabel(p.category)}</div>
               <div className="text-sm font-semibold leading-snug line-clamp-2 min-h-[2.5rem] mt-1">{p.name}</div>
               <div className="mt-2 flex items-end justify-between">
                 <span className="text-lg font-mono-num font-extrabold text-indigo-600">{money(p.price)}</span>
-                <span className="text-[10px] text-slate-500">{Math.floor(p.stock)} {p.unit || ""}</span>
               </div>
-              <button
-                onClick={() => { add(p); toast.success("Added to cart", { duration: 1000 }); }}
-                data-testid={`add-cart-${p.id}`}
-                className={`mt-3 w-full h-9 rounded-lg text-sm font-semibold flex items-center justify-center gap-1.5 ${
-                  cart ? "btn-ghost" : "btn-primary"
-                }`}
-              >
-                <ShoppingCart className="w-4 h-4" />
-                {cart ? `In cart · ${cart.quantity}` : "Add to cart"}
+              <button onClick={() => { add(p); toast.success("Added to cart"); }} className={`mt-3 w-full h-9 rounded-lg text-sm font-semibold flex items-center justify-center gap-1.5 ${cart ? "btn-ghost" : "btn-primary"}`}>
+                <ShoppingCart className="w-4 h-4" /> {cart ? `In cart (${cart.quantity})` : "Add to cart"}
               </button>
             </div>
           );
         })}
-        {filtered.length === 0 && (
-          <div className="col-span-full text-center py-24 text-slate-400">
-            <Filter className="w-10 h-10 mx-auto mb-3 opacity-50" />
-            No products match your search
-          </div>
-        )}
-      </div>
-
-      <div className="mt-8 flex items-center justify-center">
-        <Link to="/cart" data-testid="go-cart" className="btn-primary h-11 px-6 rounded-xl flex items-center gap-2">
-          <ShoppingCart className="w-4 h-4" /> Review Cart
-        </Link>
       </div>
     </div>
   );

@@ -26,7 +26,6 @@ JWT_SECRET = os.environ['JWT_SECRET']
 JWT_ALG = "HS256"
 ACCESS_MIN = 60 * 24 * 7  # 7 days
 
-# ---------- FastAPI & CORS Setup ----------
 app = FastAPI(title="CashierPro API")
 
 app.add_middleware(
@@ -39,7 +38,6 @@ app.add_middleware(
 
 api = APIRouter(prefix="/api")
 
-# ---------- helpers ----------
 def now_iso():
     return datetime.now(timezone.utc).isoformat()
 
@@ -86,7 +84,6 @@ async def require_staff(user: dict = Depends(get_current_user)) -> dict:
         raise HTTPException(status_code=403, detail="Staff only")
     return user
 
-# ---------- settings / integrations ----------
 SETTINGS_ID = "app_settings"
 DEFAULT_SETTINGS = {
     "id": SETTINGS_ID,
@@ -127,26 +124,20 @@ async def send_sms(phone: str, body: str) -> bool:
     token = os.environ.get("TWILIO_AUTH_TOKEN")
     from_num = os.environ.get("TWILIO_FROM_NUMBER")
     if not (sid and token and from_num):
-        logger.info(f"[SMS skipped - Twilio keys missing] → {phone}: {body}")
         return False
-
     to = phone.strip().replace(" ", "").replace("-", "")
     if to and to[0].isdigit() and len(to) == 10:
         to = f"+91{to}"
     elif to and not to.startswith("+"):
         to = f"+{to}"
-
     try:
         from twilio.rest import Client  # type: ignore
         client = Client(sid, token)
-        msg = await asyncio.to_thread(client.messages.create, body=body, from_=from_num, to=to)
-        logger.info(f"[SMS sent] {msg.sid} → {to}")
+        await asyncio.to_thread(client.messages.create, body=body, from_=from_num, to=to)
         return True
-    except Exception as e:
-        logger.warning(f"[SMS failed] {to}: {e}")
+    except Exception:
         return False
 
-# ---------- models ----------
 class Product(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     name: str
@@ -165,15 +156,6 @@ class PurchaseCreate(BaseModel):
     rate: float
     closing_qty: float
     date: str
-
-class ProductCreate(BaseModel):
-    name: str
-    category: str
-    price: float
-    stock: float = 0
-    barcode: Optional[str] = None
-    unit: Optional[str] = "pcs"
-    image_hint: Optional[str] = None
 
 class SaleItem(BaseModel):
     product_id: str
@@ -234,7 +216,6 @@ class SupplierCreate(BaseModel):
     company: Optional[str] = None
     address: Optional[str] = None
 
-# ---------- auth endpoints ----------
 @api.post("/auth/register")
 async def register(payload: RegisterInput):
     email = payload.email.lower().strip()
@@ -272,7 +253,6 @@ async def update_profile(payload: ProfileUpdate, user: dict = Depends(get_curren
         await db.users.update_one({"id": user["id"]}, {"$set": updates})
     return await db.users.find_one({"id": user["id"]}, {"_id": 0, "password_hash": 0})
 
-# ---------- customers endpoints ----------
 @api.get("/customers")
 async def list_customers(_: dict = Depends(require_staff)):
     customers = await db.customers.find({}, {"_id": 0}).to_list(1000)
@@ -281,7 +261,6 @@ async def list_customers(_: dict = Depends(require_staff)):
     for c in customers:
         if "id" not in c:
             c["id"] = str(uuid.uuid4())
-        # channel அல்லது type ஆன்லைன் என்றால் ஆன்லைன் கஸ்டமர், மற்றபடி walking
         if c.get("channel") == "ONLINE" or c.get("type") == "ONLINE":
             online.append(c)
         else:
@@ -294,7 +273,6 @@ async def create_customer(payload: CustomerCreate, _: dict = Depends(require_sta
     await db.customers.insert_one(doc)
     return {k: v for k, v in doc.items() if k != "_id"}
 
-# ---------- suppliers endpoints ----------
 @api.get("/suppliers")
 async def list_suppliers(_: dict = Depends(require_staff)):
     suppliers = await db.suppliers.find({}, {"_id": 0}).to_list(1000)
@@ -317,7 +295,6 @@ async def update_product(pid: str, payload: ProductCreate, _: dict = Depends(req
         raise HTTPException(status_code=404, detail="Product not found")
     return await db.products.find_one({"id": pid}, {"_id": 0})
 
-# ---------- product endpoints ----------
 @api.get("/products")
 async def list_products(q: Optional[str] = None, category: Optional[str] = None):
     query = {}
@@ -342,7 +319,6 @@ async def delete_product(pid: str, _: dict = Depends(require_owner)):
 async def list_categories():
     return sorted(await db.products.distinct("category"))
 
-# ---------- offers & broadcast endpoints ----------
 @api.post("/admin/broadcast-offer")
 async def broadcast_offer(payload: OfferBroadcastInput, _: dict = Depends(require_owner)):
     offer_doc = {"id": str(uuid.uuid4()), "message": payload.message, "created_at": now_iso()}
@@ -358,21 +334,6 @@ async def broadcast_offer(payload: OfferBroadcastInput, _: dict = Depends(requir
 async def get_active_offers():
     return await db.offers.find({}, {"_id": 0}).sort("created_at", -1).limit(10).to_list(10)
 
-@api.put("/admin/offers/{oid}")
-async def update_offer(oid: str, payload: OfferBroadcastInput, _: dict = Depends(require_owner)):
-    r = await db.offers.update_one({"id": oid}, {"$set": {"message": payload.message}})
-    if r.matched_count == 0:
-        raise HTTPException(status_code=404, detail="Offer not found")
-    return {"ok": True}
-
-@api.delete("/admin/offers/{oid}")
-async def delete_offer(oid: str, _: dict = Depends(require_owner)):
-    r = await db.offers.delete_one({"id": oid})
-    if r.deleted_count == 0:
-        raise HTTPException(status_code=404, detail="Offer not found")
-    return {"ok": True}
-
-# ---------- purchases endpoints ----------
 @api.get("/purchases")
 async def list_purchases(_: dict = Depends(require_staff)):
     return await db.purchases.find({}, {"_id": 0}).to_list(2000)
@@ -383,7 +344,6 @@ async def create_purchase(payload: PurchaseCreate, _: dict = Depends(require_sta
     await db.purchases.insert_one(doc)
     return {k: v for k, v in doc.items() if k != "_id"}
 
-# ---------- orders ----------
 def gen_receipt_no():
     return f"RCP-{datetime.now(timezone.utc).strftime('%Y%m%d')}-{uuid.uuid4().hex[:6].upper()}"
 
@@ -413,7 +373,6 @@ async def create_order(payload: OrderCreate, request: Request):
     }
     await db.orders.insert_one(doc)
 
-    # கஸ்டமர் போன் நம்பர் இருந்தால் அவர்களை customers டேட்டாபேஸில் சேமிக்க / அப்டேட் செய்ய
     if payload.customer_phone:
         await db.customers.update_one(
             {"phone": payload.customer_phone},
@@ -441,25 +400,6 @@ async def create_order(payload: OrderCreate, request: Request):
 async def list_orders(request: Request, limit: int = 200):
     return await db.orders.find({}, {"_id": 0}).sort("created_at", -1).to_list(limit)
 
-@api.patch("/orders/{oid}/status")
-async def update_order_status(oid: str, payload: OrderStatusUpdate, _: dict = Depends(require_staff)):
-    updates = {k: v for k, v in payload.model_dump().items() if v is not None}
-    if not updates:
-        raise HTTPException(status_code=400, detail="No updates provided")
-    
-    order = await db.orders.find_one({"id": oid})
-    if not order:
-        raise HTTPException(status_code=404, detail="Order not found")
-        
-    updates["status_history"] = order.get("status_history", []) + [{"at": now_iso(), **updates}]
-    
-    r = await db.orders.update_one({"id": oid}, {"$set": updates})
-    if r.matched_count == 0:
-        raise HTTPException(status_code=404, detail="Order not found")
-    
-    return await db.orders.find_one({"id": oid}, {"_id": 0})
-
-# ---------- settings endpoints ----------
 @api.get("/settings")
 async def read_settings():
     return await get_settings()
@@ -471,7 +411,6 @@ async def write_settings(payload: SettingsUpdate, _: dict = Depends(require_owne
     await db.settings.update_one({"id": SETTINGS_ID}, {"$set": updates}, upsert=True)
     return await read_settings()
 
-# ---------- wishlist ----------
 @api.get("/wishlist")
 async def get_wishlist(user: dict = Depends(get_current_user)):
     items = await db.wishlist.find({"user_id": user["id"]}, {"_id": 0}).to_list(500)
@@ -491,7 +430,6 @@ async def add_wishlist(payload: WishlistItemIn, user: dict = Depends(get_current
     await db.wishlist.insert_one(doc)
     return {"ok": True, "existed": False}
 
-# ---------- stats ----------
 @api.get("/stats/summary")
 async def stats_summary():
     return {
@@ -502,7 +440,6 @@ async def stats_summary():
         "pending_orders": await db.orders.count_documents({"order_status": {"$in": ["PENDING", "CONFIRMED"]}})
     }
 
-# ---------- root ----------
 @api.get("/")
 async def root():
     return {"message": "GS Billing API", "brand": "GS", "built_by": "R I Billing Pro"}
