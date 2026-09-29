@@ -1,15 +1,12 @@
 import axios from "axios";
 
-// எப்போதும் நேரடியாக ரெண்டர் URL மட்டுமே செயல்படும் படி மாற்றுதல்
+// Vercel ரவுட்டிங் சிக்கலைத் தவிர்க்க நேரடியாக ரெண்டர் பேக்எண்ட் URL-ஐப் பயன்படுத்துதல்
 export const api = axios.create({
   baseURL: "https://gs-supermarket.onrender.com/api",
   timeout: 20000,
 });
-export const authRegister = async (payload) => {
-  const response = await api.post("/auth/register", payload);
-  return response.data;
-};
 
+// Request Interceptor (Auth Token சேர்க்க)
 api.interceptors.request.use((config) => {
   const t = localStorage.getItem("token");
   if (t) config.headers.Authorization = `Bearer ${t}`;
@@ -35,11 +32,11 @@ export const fetchOrders = (params = {}) => api.get("/orders", { params }).then(
 export const fetchOrder = (id) => api.get(`/orders/${id}`).then((r) => r.data);
 export const updateOrderStatus = (id, payload) => api.patch(`/orders/${id}/status`, payload).then((r) => r.data);
 
-// Customers (Newly Added)
+// Customers
 export const fetchCustomers = () => api.get("/customers").then((r) => r.data);
 export const createCustomer = (payload) => api.post("/customers", payload).then((r) => r.data);
 
-// Suppliers (Newly Added)
+// Suppliers
 export const fetchSuppliers = () => api.get("/suppliers").then((r) => r.data);
 export const createSupplier = (payload) => api.post("/suppliers", payload).then((r) => r.data);
 
@@ -50,7 +47,7 @@ export const removeWishlist = (product_id) => api.delete(`/wishlist/${product_id
 
 // Auth
 export const authLogin = (email, password) => api.post("/auth/login", { email, password }).then((r) => r.data);
-export const authRegisterUser = (payload) => api.post("/auth/register", payload).then((r) => r.data);
+export const authRegister = (payload) => api.post("/auth/register", payload).then((r) => r.data);
 export const authMe = () => api.get("/auth/me").then((r) => r.data);
 export const updateProfile = (payload) => api.put("/auth/profile", payload).then((r) => r.data);
 
@@ -68,12 +65,13 @@ export const createPurchase = (payload) => api.post("/purchases", payload).then(
 export const updatePurchase = (id, payload) => api.put(`/purchases/${id}`, payload).then((r) => r.data);
 export const deletePurchase = (id) => api.delete(`/purchases/${id}`).then((r) => r.data);
 
-// Admin Offers / Broadcast & Management (Newly Added)
+// Admin Offers / Broadcast & Management
 export const broadcastOffer = (payload) => api.post("/admin/broadcast-offer", payload).then((r) => r.data);
 export const fetchActiveOffers = () => api.get("/offers/active").then((r) => r.data);
 export const updateOffer = (id, payload) => api.put(`/admin/offers/${id}`, payload).then((r) => r.data);
 export const deleteOffer = (id) => api.delete(`/admin/offers/${id}`).then((r) => r.data);
 
+// Utilities & Formatting
 export const money = (n) =>
   `₹${Number(n || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
