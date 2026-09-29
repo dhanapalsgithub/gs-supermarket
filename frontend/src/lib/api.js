@@ -1,10 +1,14 @@
 import axios from "axios";
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "https://gs-supermarket.onrender.com";
+// Vercel அல்லது லோக்கல் ஹோஸ்டுக்கான பாதுகாப்பான URL அமைப்பு
+const BACKEND_URL = 
+  process.env.REACT_APP_BACKEND_URL || 
+  process.env.NEXT_PUBLIC_BACKEND_URL || 
+  "https://gs-supermarket.onrender.com";
+
 export const API = `${BACKEND_URL}/api`;
 
 export const api = axios.create({ baseURL: API, timeout: 20000 });
-
 export const authRegister = async (payload) => {
   const response = await api.post("/auth/register", payload);
   return response.data;
