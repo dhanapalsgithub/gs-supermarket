@@ -28,7 +28,7 @@ export default function AdminOffers() {
   };
 
   // புதிய ஆஃபர் Broadcast செய்ய
-  const handleBroadcast = async (e) => {
+ const handleBroadcast = async (e) => {
     e.preventDefault();
     if (!message.trim()) return;
 
@@ -38,14 +38,19 @@ export default function AdminOffers() {
     setResult(null);
 
     try {
+      // api.js-ல் உள்ள broadcastOffer-ஐ நேரடியாகப் பயன்படுத்துதல்
       const data = await broadcastOffer({ message });
-      setResult(data);
+      
+      // சர்வர் வெற்றிகரமாக டேட்டாவைத் தந்தால்
+      setResult(data || { total_targeted: 0, sent: 0 });
       setMessage("");
       loadOffers(); // பட்டியலைப் புதுப்பிக்க
       toast.success("ஆஃபர் வெற்றிகரமாக அனுப்பப்பட்டது");
     } catch (err) {
-      const errorMsg = err.response?.data?.detail || "ஆஃபர் அனுப்புவதில் தோல்வி ஏற்பட்டது";
-      alert(errorMsg);
+      console.error("Broadcast Error:", err);
+      // நெட்வொர்க் பிழை அல்லது பேக்எண்ட் தரும் பிழையைக் காட்டுதல்
+      const errorMsg = err.response?.data?.detail || err.message || "ஆஃபர் அனுப்புவதில் தோல்வி ஏற்பட்டது";
+      toast.error(errorMsg);
     } finally {
       setLoading(false);
     }
