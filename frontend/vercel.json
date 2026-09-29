@@ -1,8 +1,0 @@
-{
-  "rewrites": [
-    {
-      "source": "/api/(.*)",
-      "destination": "https://gs-supermarket.onrender.com/api/$1"
-    }
-  ]
-}
