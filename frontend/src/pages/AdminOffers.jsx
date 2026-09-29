@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Send, Megaphone, CheckCircle2, Trash2, Edit3, X } from "lucide-react";
 import { toast } from "sonner";
-import { api, fetchActiveOffers, broadcastOffer, updateOffer, deleteOffer } from "./api"; // api.js இலிருந்து இறக்குமதி செய்தல்
+import { api, fetchActiveOffers, broadcastOffer, updateOffer, deleteOffer } from "../lib/api"; // api.js இலிருந்து இறக்குமதி செய்தல்
 
 export default function AdminOffers() {
   const [message, setMessage] = useState("");
