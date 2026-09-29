@@ -1,8 +1,7 @@
 import axios from "axios";
 
-// நேரடியாக ரெண்டர் பேக்எண்ட் URL-ஐ வழங்குதல் (Environment variable சிக்கலைத் தவிர்க்க)
-const BACKEND_URL = "https://gs-supermarket.onrender.com";
-export const API = `${BACKEND_URL}/api`;
+// நேரடியாக முழுமையான ரெண்டர் URL-ஐ மட்டும் பயன்படுத்தவும்
+export const API = "https://gs-supermarket.onrender.com/api";
 
 export const api = axios.create({ baseURL: API, timeout: 20000 });
 export const authRegister = async (payload) => {
