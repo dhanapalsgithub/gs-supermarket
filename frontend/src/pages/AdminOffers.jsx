@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Send, Megaphone, CheckCircle2, Trash2, Edit3, X } from "lucide-react";
 import { toast } from "sonner";
+import { api, broadcastOffer, fetchActiveOffers, updateOffer, deleteOffer } from "./api"; // api.js இலிருந்து இறக்குமதி செய்தல்
 
 export default function AdminOffers() {
   const [message, setMessage] = useState("");
@@ -13,18 +14,16 @@ export default function AdminOffers() {
 
   // ஆஃபர்களை உடனுக்குடன் லோட் செய்தல்
   useEffect(() => {
-    fetchOffers();
+    loadOffers();
   }, []);
 
-  const fetchOffers = async () => {
+  const loadOffers = async () => {
     try {
-      const res = await fetch("/api/offers/active");
-      const data = await res.json();
-      if (res.ok) {
-        setOffers(data);
-      }
+      const data = await fetchActiveOffers();
+      setOffers(data);
     } catch (err) {
       console.error("Failed to load offers", err);
+      toast.error("ஆஃபர்களை ஏற்றுவதில் தோல்வி ஏற்பட்டது");
     }
   };
 
@@ -39,27 +38,14 @@ export default function AdminOffers() {
     setResult(null);
 
     try {
-      const token = localStorage.getItem("token");
-      const res = await fetch("/api/admin/broadcast-offer", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify({ message })
-      });
-      
-      const data = await res.json();
-      if (res.ok) {
-        setResult(data);
-        setMessage("");
-        fetchOffers(); // பட்டியலைப் புதுப்பிக்க
-        toast.success("ஆஃபர் வெற்றிகரமாக அனுப்பப்பட்டது");
-      } else {
-        alert(data.detail || "ஆஃபர் அனுப்புவதில் தோல்வி ஏற்பட்டது");
-      }
+      const data = await broadcastOffer({ message });
+      setResult(data);
+      setMessage("");
+      loadOffers(); // பட்டியலைப் புதுப்பிக்க
+      toast.success("ஆஃபர் வெற்றிகரமாக அனுப்பப்பட்டது");
     } catch (err) {
-      alert("நெட்வொர்க் பிழை ஏற்பட்டது");
+      const errorMsg = err.response?.data?.detail || "ஆஃபர் அனுப்புவதில் தோல்வி ஏற்பட்டது";
+      alert(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -69,19 +55,11 @@ export default function AdminOffers() {
   const handleDelete = async (id) => {
     if (!confirm("இந்த ஆஃபரை நீக்க விரும்புகிறீர்களா?")) return;
     try {
-      const token = localStorage.getItem("token");
-      const res = await fetch(`/api/admin/offers/${id}`, {
-        method: "DELETE",
-        headers: { "Authorization": `Bearer ${token}` }
-      });
-      if (res.ok) {
-        toast.success("ஆஃபர் நீக்கப்பட்டது");
-        fetchOffers();
-      } else {
-        toast.error("நீக்குவதில் தோல்வி ஏற்பட்டது");
-      }
+      await deleteOffer(id);
+      toast.success("ஆஃபர் நீக்கப்பட்டது");
+      loadOffers();
     } catch (err) {
-      toast.error("நெட்வொர்க் பிழை ஏற்பட்டது");
+      toast.error("நீக்குவதில் தோல்வி ஏற்பட்டது");
     }
   };
 
@@ -89,25 +67,13 @@ export default function AdminOffers() {
   const handleUpdate = async (id) => {
     if (!editMessage.trim()) return;
     try {
-      const token = localStorage.getItem("token");
-      const res = await fetch(`/api/admin/offers/${id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify({ message: editMessage })
-      });
-      if (res.ok) {
-        toast.success("ஆஃபர் மாற்றப்பட்டது");
-        setEditingId(null);
-        setEditMessage("");
-        fetchOffers();
-      } else {
-        toast.error("மாற்றுவதில் தோல்வி ஏற்பட்டது");
-      }
+      await updateOffer(id, { message: editMessage });
+      toast.success("ஆஃபர் மாற்றப்பட்டது");
+      setEditingId(null);
+      setEditMessage("");
+      loadOffers();
     } catch (err) {
-      toast.error("நெட்வொர்க் பிழை ஏற்பட்டது");
+      toast.error("மாற்றுவதில் தோல்வி ஏற்பட்டது");
     }
   };
 
