@@ -1,9 +1,10 @@
 import axios from "axios";
 
-// நேரடியாக முழுமையான ரெண்டர் URL-ஐ மட்டும் பயன்படுத்தவும்
-export const API = "https://gs-supermarket.onrender.com/api";
-
-export const api = axios.create({ baseURL: API, timeout: 20000 });
+// எப்போதும் நேரடியாக ரெண்டர் URL மட்டுமே செயல்படும் படி மாற்றுதல்
+export const api = axios.create({
+  baseURL: "https://gs-supermarket.onrender.com/api",
+  timeout: 20000,
+});
 export const authRegister = async (payload) => {
   const response = await api.post("/auth/register", payload);
   return response.data;
