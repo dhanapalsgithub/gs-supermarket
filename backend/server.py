@@ -302,6 +302,14 @@ async def create_supplier(payload: SupplierCreate, _: dict = Depends(require_own
     await db.suppliers.insert_one(doc)
     return {k: v for k, v in doc.items() if k != "_id"}
 
+@api.put("/products/{pid}")
+async def update_product(pid: str, payload: ProductCreate, _: dict = Depends(require_owner)):
+    updates = payload.model_dump()
+    r = await db.products.update_one({"id": pid}, {"$set": updates})
+    if r.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Product not found")
+    return await db.products.find_one({"id": pid}, {"_id": 0})
+
 # ---------- product endpoints ----------
 @api.get("/products")
 async def list_products(q: Optional[str] = None, category: Optional[str] = None):

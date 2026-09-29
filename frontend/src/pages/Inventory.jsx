@@ -4,8 +4,8 @@ import { fetchProducts, fetchCategories, createProduct, updateProduct, deletePro
 import { Plus, Pencil, Trash2, Package, Search, Upload, Download, X, AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
 
 const empty = { name: "", category: "GROCERY", price: 0, stock: 0, barcode: "", unit: "pcs", image_hint: "" };
-const LOW_STOCK_THRESHOLD = 10; // குறைந்த இருப்பு எச்சரிக்கை வரம்பு
-const PAGE_SIZE = 10; // ஒரு பக்கத்திற்கு 10 பொருட்கள்
+const LOW_STOCK_THRESHOLD = 10; 
+const PAGE_SIZE = 10; 
 
 export default function Inventory() {
   const [products, setProducts] = useState([]);
@@ -54,17 +54,28 @@ export default function Inventory() {
     e.preventDefault();
     try {
       const payload = { ...form, price: Number(form.price), stock: Number(form.stock) };
-      if (editing) await updateProduct(editing.id, payload);
-      else await createProduct(payload);
-      toast.success(editing ? "Product updated" : "Product added");
-      setShowForm(false); load();
-    } catch { toast.error("Failed to save"); }
+      if (editing) {
+        await updateProduct(editing.id, payload);
+      } else {
+        await createProduct(payload);
+      }
+      toast.success(editing ? "Product updated successfully" : "Product added successfully");
+      setShowForm(false); 
+      load();
+    } catch (err) { 
+      toast.error("Failed to save product"); 
+    }
   };
 
   const remove = async (p) => {
     if (!window.confirm(`Delete ${p.name}?`)) return;
-    await deleteProduct(p.id);
-    toast.success("Deleted"); load();
+    try {
+      await deleteProduct(p.id);
+      toast.success("Product deleted successfully"); 
+      load();
+    } catch {
+      toast.error("Failed to delete product");
+    }
   };
 
   const handleAutoDeductStock = async (productId, soldQuantity) => {
@@ -91,12 +102,12 @@ export default function Inventory() {
       const res = await importProductsCsv(file);
       toast.success(`Imported: ${res.created} added, ${res.updated} updated${res.errors ? `, ${res.errors} errors` : ""}`);
       load();
-    } catch { toast.error("Import failed. Ensure CSV has: name, category, price, stock, barcode, unit"); }
+    } catch { toast.error("Import failed. Ensure CSV has correct columns"); }
     finally { if (fileRef.current) fileRef.current.value = ""; }
   };
 
   const downloadTemplate = () => {
-    const csv = "name,category,price,stock,barcode,unit,image_hint\nSample Product,GROCERY,50.00,25,123456,PC,sample.png\n";
+    const csv = "name,category,price,stock,barcode,unit,image_hint\nSample Product,GROCERY,50.00,25,123456,PC,https://example.com/image.jpg\n";
     const blob = new Blob([csv], { type: "text/csv" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob); a.download = "product_template.csv"; a.click();
