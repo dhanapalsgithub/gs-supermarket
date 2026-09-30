@@ -10,10 +10,10 @@ export default function ReceiptModal({ sale, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 print:p-0 print:bg-white print:inset-auto">
+      <div className="bg-white w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] print:max-h-none print:shadow-none print:w-full print:rounded-none">
         
-        {/* Header Actions (Hidden when printing) */}
+        {/* Header Actions (Hidden completely when printing) */}
         <div className="p-4 bg-slate-100 border-b flex items-center justify-between print:hidden">
           <span className="font-bold text-sm text-slate-700">Receipt Preview (80mm)</span>
           <div className="flex gap-2">
@@ -32,16 +32,16 @@ export default function ReceiptModal({ sale, onClose }) {
           </div>
         </div>
 
-        {/* Printable Receipt Area (80mm Standard Size Layout) */}
-        <div className="p-6 overflow-y-auto font-mono text-xs text-slate-800 space-y-4 print:p-0 print:m-0 print:w-[80mm]" id="printable-receipt">
+        {/* Printable Receipt Area */}
+        <div className="p-6 overflow-y-auto font-mono text-xs text-slate-900 space-y-3 bg-white print:p-2 print:m-0 print:w-full print:overflow-visible">
           
           <div className="text-center space-y-1">
-            <h2 className="text-base font-extrabold uppercase tracking-wider">GS BILLING PRO</h2>
-            <p className="text-[11px] text-slate-500">Store Counter Sales Receipt</p>
+            <h2 className="text-sm font-black uppercase tracking-wider">GS BILLING PRO</h2>
+            <p className="text-[10px] text-slate-600">Store Counter Sales Receipt</p>
             <p className="text-[10px] text-slate-400">------------------------------------------------</p>
           </div>
 
-          <div className="space-y-0.5 text-[11px]">
+          <div className="space-y-1 text-[11px]">
             <div className="flex justify-between">
               <span>Receipt No:</span>
               <span className="font-bold">{sale.receipt_no || "N/A"}</span>
@@ -62,20 +62,20 @@ export default function ReceiptModal({ sale, onClose }) {
             )}
           </div>
 
-          <div className="border-t border-dashed border-slate-300 pt-2">
+          <div className="border-t border-dashed border-slate-400 pt-2">
             <table className="w-full text-left">
               <thead>
-                <tr className="border-b border-dashed border-slate-200 text-[10px] text-slate-500">
+                <tr className="border-b border-dashed border-slate-300 text-[10px] text-slate-600">
                   <th className="pb-1">Item</th>
                   <th className="pb-1 text-center">Qty</th>
                   <th className="pb-1 text-right">Price</th>
                   <th className="pb-1 text-right">Total</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-dashed divide-slate-100">
+              <tbody className="divide-y divide-dashed divide-slate-200">
                 {sale.items && sale.items.map((item, idx) => (
                   <tr key={idx} className="text-[11px]">
-                    <td className="py-1 pr-1 truncate max-w-[110px]">{item.name}</td>
+                    <td className="py-1 pr-1 truncate max-w-[100px]">{item.name}</td>
                     <td className="py-1 text-center">{item.quantity}</td>
                     <td className="py-1 text-right">{money(item.price)}</td>
                     <td className="py-1 text-right font-bold">{money(item.subtotal)}</td>
@@ -85,7 +85,7 @@ export default function ReceiptModal({ sale, onClose }) {
             </table>
           </div>
 
-          <div className="border-t border-dashed border-slate-300 pt-2 space-y-1 text-[11px]">
+          <div className="border-t border-dashed border-slate-400 pt-2 space-y-1 text-[11px]">
             <div className="flex justify-between">
               <span>Subtotal:</span>
               <span>{money(sale.subtotal)}</span>
@@ -100,21 +100,21 @@ export default function ReceiptModal({ sale, onClose }) {
                 <span>-{money(sale.discount)}</span>
               </div>
             )}
-            <div className="flex justify-between text-sm font-bold pt-1 border-t border-slate-300">
+            <div className="flex justify-between text-xs font-black pt-1 border-t border-slate-400">
               <span>TOTAL:</span>
               <span>{money(sale.total)}</span>
             </div>
-            <div className="flex justify-between text-[10px] text-slate-500 pt-1">
+            <div className="flex justify-between text-[10px] text-slate-600 pt-1">
               <span>Payment Mode:</span>
               <span className="font-bold">{sale.payment_method || "CASH"}</span>
             </div>
             {sale.payment_method === "CASH" && (
               <>
-                <div className="flex justify-between text-[10px] text-slate-500">
+                <div className="flex justify-between text-[10px] text-slate-600">
                   <span>Cash Paid:</span>
                   <span>{money(sale.amount_paid || sale.total)}</span>
                 </div>
-                <div className="flex justify-between text-[10px] text-slate-500">
+                <div className="flex justify-between text-[10px] text-slate-600">
                   <span>Change Due:</span>
                   <span>{money(sale.change_due || 0)}</span>
                 </div>
@@ -122,7 +122,7 @@ export default function ReceiptModal({ sale, onClose }) {
             )}
           </div>
 
-          <div className="text-center pt-4 space-y-1 text-[10px] text-slate-500 border-t border-dashed border-slate-300">
+          <div className="text-center pt-3 space-y-1 text-[10px] text-slate-600 border-t border-dashed border-slate-400">
             <p className="font-bold">Thank You! Visit Again!</p>
             <p>Powered by GS Billing Pro</p>
           </div>
