@@ -11,54 +11,60 @@ export default function ReceiptModal({ sale, onClose }) {
 
   return (
     <>
-      {/* Global CSS override for POS Thermal Printing */}
-      <style>{`
-        @media print {
-          /* 1. Hide every top-level element in body */
-          body > * {
-            display: none !important;
-          }
+      {/* Thermal Printer Print Styles Fix */}
+     <style>{`
+  @media print {
+    /* 1. Remove standard browser margins and page spacing */
+    @page {
+      size: 80mm auto;
+      margin: 0 !important;
+    }
 
-          /* 2. Unhide print container subtree */
-          #print-root, #print-root * {
-            display: block !important;
-          }
+    html, body {
+      margin: 0 !important;
+      padding: 0 !important;
+      background: #ffffff !important;
+      height: auto !important;
+    }
 
-          /* 3. Re-enable flexbox table alignments */
-          #printable-receipt table {
-            display: table !important;
-            width: 100% !important;
-          }
-          #printable-receipt tr {
-            display: table-row !important;
-          }
-          #printable-receipt td, #printable-receipt th {
-            display: table-cell !important;
-          }
-          #printable-receipt .flex {
-            display: flex !important;
-          }
+    /* 2. Hide everything outside the receipt */
+    body {
+      visibility: hidden !important;
+    }
 
-          /* 4. Force print layout to fixed 80mm width */
-          #print-root {
-            position: absolute !important;
-            left: 0 !important;
-            top: 0 !important;
-            width: 80mm !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            background: #ffffff !important;
-            color: #000000 !important;
-          }
+    /* 3. Render receipt contents continuously without forced heights */
+    #print-root, #print-root * {
+      visibility: visible !important;
+    }
 
-          /* 5. Set page margin to zero for receipt paper */
-          @page {
-            size: 80mm auto;
-            margin: 0mm;
-          }
-        }
-      `}</style>
+    #print-root {
+      position: absolute !important;
+      left: 0 !important;
+      top: 0 !important;
+      width: 80mm !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      background: #ffffff !important;
+      box-shadow: none !important;
+    }
 
+    #printable-receipt {
+      width: 100% !important;
+      padding: 2mm 3mm !important; /* Reduced top/bottom padding */
+      margin: 0 !important;
+      color: #000000 !important;
+    }
+
+    #printable-receipt table {
+      width: 100% !important;
+      border-collapse: collapse !important;
+    }
+    
+    #printable-receipt .flex {
+      display: flex !important;
+    }
+  }
+`}</style>
       <div id="print-root" className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 print:p-0 print:static print:bg-transparent">
         <div className="bg-white w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] print:max-h-none print:shadow-none print:w-full print:rounded-none">
           
