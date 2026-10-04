@@ -108,7 +108,7 @@ export default function ReceiptModal({ sale, onClose }) {
                 />
 
                 <h2 className="text-base font-black uppercase tracking-wider text-black leading-tight">
-                  GS BILLING PRO
+                  GS India Store
                 </h2>
 
                 <p className="text-[10px] text-black font-bold max-w-[220px] mx-auto leading-tight">
