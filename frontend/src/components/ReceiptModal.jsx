@@ -11,81 +11,65 @@ export default function ReceiptModal({ sale, onClose }) {
 
   return (
     <>
-      {/* High-Contrast Print & Thermal Printer Styles */}
-      <style>{`
-        @media print {
-          @page {
-            size: 80mm auto !important;
-            margin: 0mm !important;
-          }
+     <style>{`
+  @media print {
+    @page {
+      size: 80mm auto !important;
+      margin: 0mm !important;
+    }
 
-          html, body {
-            margin: 0 !important;
-            padding: 0 !important;
-            background: #ffffff !important;
-            color: #000000 !important;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-          }
+    html, body {
+      margin: 0 !important;
+      padding: 0 !important;
+      height: auto !important;
+      overflow: visible !important;
+      background: #ffffff !important;
+    }
 
-          body > * {
-            display: none !important;
-          }
+    /* Hide background page elements */
+    body > * {
+      display: none !important;
+    }
 
-          #print-root {
-            display: block !important;
-            visibility: visible !important;
-            position: absolute !important;
-            left: 0 !important;
-            top: 0 !important;
-            width: 100% !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            background: #ffffff !important;
-            box-shadow: none !important;
-          }
+    /* Target modal container directly */
+    #print-receipt-wrapper {
+      display: block !important;
+      visibility: visible !important;
+      position: relative !important; /* Prevents push-down page breaks */
+      top: 0 !important;
+      left: 0 !important;
+      width: 100% !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      page-break-inside: avoid !important;
+      break-inside: avoid !important;
+    }
 
-          #print-root * {
-            display: revert !important;
-            visibility: visible !important;
-            color: #000000 !important;
-            font-weight: 700 !important;
-            opacity: 1 !important;
-          }
+    #print-receipt-wrapper * {
+      visibility: visible !important;
+    }
 
-          #printable-receipt {
-            display: block !important;
-            width: 100% !important;
-            max-width: 80mm !important;
-            padding: 2mm !important;
-            margin: 0 !important;
-            font-family: 'Courier New', Courier, monospace !important;
-            font-size: 12px !important;
-            line-height: 1.3 !important;
-            color: #000000 !important;
-          }
+    #printable-receipt {
+      display: block !important;
+      width: 100% !important;
+      padding: 2mm !important;
+      margin: 0 !important;
+      page-break-inside: avoid !important;
+      break-inside: avoid !important;
+    }
+  }
+`}</style>
 
-          #printable-receipt table {
-            width: 100% !important;
-            border-collapse: collapse !important;
-          }
-
-          #printable-receipt th, 
-          #printable-receipt td {
-            color: #000000 !important;
-            font-weight: 700 !important;
-          }
-
-          #printable-receipt .flex {
-            display: flex !important;
-          }
-        }
-      `}</style>
-
-      <div id="print-root" className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 print:p-0 print:static print:bg-transparent">
-        <div className="bg-white w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] print:max-h-none print:shadow-none print:w-full print:rounded-none">
+      {/* Main Overlay Modal */}
+      <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 print:p-0 print:bg-transparent print:static">
+        
+        {/* Modal Card Wrapper */}
+        <div 
+          id="print-receipt-wrapper" 
+          className="bg-white w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] print:max-h-none print:shadow-none print:w-full print:rounded-none"
+        >
           
-          {/* Header Actions */}
+          {/* Action Bar (Hidden when printing) */}
           <div className="p-4 bg-slate-100 border-b flex items-center justify-between print:hidden">
             <span className="font-bold text-sm text-slate-800">Receipt Preview (80mm)</span>
             <div className="flex gap-2">
@@ -104,10 +88,10 @@ export default function ReceiptModal({ sale, onClose }) {
             </div>
           </div>
 
-          {/* High-Contrast Receipt Content */}
+          {/* Printable Thermal Receipt Content */}
           <div 
             id="printable-receipt" 
-            className="p-6 overflow-y-auto font-mono text-xs text-black font-bold space-y-3 bg-white print:p-2 print:m-0 print:w-full print:overflow-visible"
+            className="p-6 overflow-y-auto font-mono text-xs text-black font-bold space-y-3 bg-white print:p-0 print:m-0 print:w-full print:overflow-visible"
           >
             <div className="text-center space-y-1">
               <h2 className="text-base font-black uppercase tracking-wider text-black">GS BILLING PRO</h2>
@@ -126,7 +110,7 @@ export default function ReceiptModal({ sale, onClose }) {
               </div>
               <div className="flex justify-between">
                 <span>Cashier:</span>
-                <span className="font-bold">{sale.cashier || "Cashier"}</span>
+                <span className="font-bold">{sale.cashier || "Admin"}</span>
               </div>
               {sale.customer_name && (
                 <div className="flex justify-between">
