@@ -11,62 +11,72 @@ export default function ReceiptModal({ sale, onClose }) {
 
   return (
     <>
-      <style>{`
-        @media print {
-          /* 1. Page dimensions reset for 80mm continuous thermal roll */
-          @page {
-            size: 80mm auto !important;
-            margin: 0mm !important;
-          }
+     <style>{`
+  @media print {
+    /* 1. Page dimensions reset for 80mm continuous thermal roll */
+    @page {
+      size: 80mm auto !important;
+      margin: 0mm !important;
+    }
 
-          /* 2. Hide everything on the page visually */
-          body * {
-            visibility: hidden !important;
-          }
+    /* 2. Hide everything on the page visually */
+    body * {
+      visibility: hidden !important;
+    }
 
-          /* 3. Make ONLY the printable section and its children visible */
-          #print-area, #print-area * {
-            visibility: visible !important;
-          }
+    /* 3. Make ONLY the printable section and its children visible */
+    #print-area, #print-area * {
+      visibility: visible !important;
+    }
 
-          /* 4. Position print area directly at top-left corner with box-sizing */
-          #print-area {
-            position: fixed !important;
-            left: 0 !important;
-            top: 0 !important;
-            width: 72mm !important; /* Printable printable width on 80mm paper */
-            margin: 0 !important;
-            padding: 2mm 3mm !important;
-            background: #ffffff !important;
-            color: #000000 !important;
-            box-sizing: border-box !important;
-          }
+    /* 4. Position print area directly at top-left corner with box-sizing */
+    #print-area {
+      position: fixed !important;
+      left: 0 !important;
+      top: 0 !important;
+      width: 72mm !important; /* Printable width on 80mm paper */
+      margin: 0 !important;
+      padding: 2mm 3mm !important;
+      background: #ffffff !important;
+      color: #000000 !important;
+      box-sizing: border-box !important;
+    }
 
-          /* 5. Typography and layout rules for crisp thermal printing */
-          #printable-receipt {
-            width: 100% !important;
-            font-family: 'Courier New', Courier, monospace !important;
-            font-size: 11px !important;
-            line-height: 1.2 !important;
-            color: #000000 !important;
-            box-sizing: border-box !important;
-          }
+    /* 5. Typography and layout rules for crisp thermal printing */
+    #printable-receipt {
+      width: 100% !important;
+      font-family: 'Courier New', Courier, monospace !important;
+      font-size: 11px !important;
+      line-height: 1.2 !important;
+      color: #000000 !important;
+      box-sizing: border-box !important;
+    }
 
-          #printable-receipt table {
-            width: 100% !important;
-            border-collapse: collapse !important;
-            table-layout: fixed !important;
-          }
+    /* Enlarge logo specifically for thermal print */
+    #printable-receipt img {
+      width: 64px !important;
+      height: 64px !important;
+      max-width: 100% !important;
+      object-fit: contain !important;
+      margin: 0 auto 4px auto !important;
+      display: block !important;
+    }
 
-          #printable-receipt th, 
-          #printable-receipt td {
-            color: #000000 !important;
-            font-weight: 700 !important;
-            word-break: break-word !important;
-            padding: 2px 0 !important;
-          }
-        }
-      `}</style>
+    #printable-receipt table {
+      width: 100% !important;
+      border-collapse: collapse !important;
+      table-layout: fixed !important;
+    }
+
+    #printable-receipt th, 
+    #printable-receipt td {
+      color: #000000 !important;
+      font-weight: 700 !important;
+      word-break: break-word !important;
+      padding: 2px 0 !important;
+    }
+  }
+`}</style>
 
       {/* Screen Overlay Container */}
       <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
