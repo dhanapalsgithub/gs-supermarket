@@ -102,7 +102,7 @@ export default function ReceiptModal({ sale, onClose }) {
               <div className="text-center space-y-1 flex flex-col items-center">
                 {/* Receipt Logo */}
                 <img
-                  src="/icon-512.png"
+                  src="/icon-513.png"
                   alt="Logo"
                   className="w-12 h-12 mx-auto mb-1 object-contain print:w-10 print:h-10"
                 />
