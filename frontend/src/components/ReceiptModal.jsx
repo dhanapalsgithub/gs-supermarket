@@ -11,53 +11,73 @@ export default function ReceiptModal({ sale, onClose }) {
 
   return (
     <>
-      {/* Thermal Printer Print Styles Fix */}
+      {/* High-Contrast Print & Thermal Printer Styles */}
       <style>{`
         @media print {
-          /* 1. Reset Body & Hide All Page Content Except Receipt Container */
-          body {
-            visibility: hidden !important;
+          @page {
+            size: 80mm auto !important;
+            margin: 0mm !important;
+          }
+
+          html, body {
+            margin: 0 !important;
+            padding: 0 !important;
             background: #ffffff !important;
+            color: #000000 !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
           }
 
-          /* 2. Target Print Container & Make visible */
-          #print-root, #print-root * {
-            visibility: visible !important;
+          body > * {
+            display: none !important;
           }
 
-          /* 3. Position the printable receipt to top left corner */
           #print-root {
+            display: block !important;
+            visibility: visible !important;
             position: absolute !important;
             left: 0 !important;
             top: 0 !important;
-            width: 80mm !important;
+            width: 100% !important;
             margin: 0 !important;
             padding: 0 !important;
             background: #ffffff !important;
             box-shadow: none !important;
           }
 
+          #print-root * {
+            display: revert !important;
+            visibility: visible !important;
+            color: #000000 !important;
+            font-weight: 700 !important;
+            opacity: 1 !important;
+          }
+
           #printable-receipt {
+            display: block !important;
             width: 100% !important;
-            padding: 4mm !important;
+            max-width: 80mm !important;
+            padding: 2mm !important;
             margin: 0 !important;
+            font-family: 'Courier New', Courier, monospace !important;
+            font-size: 12px !important;
+            line-height: 1.3 !important;
             color: #000000 !important;
           }
 
-          /* 4. Display alignment fixes */
           #printable-receipt table {
             width: 100% !important;
             border-collapse: collapse !important;
           }
-          
-          #printable-receipt .flex {
-            display: flex !important;
+
+          #printable-receipt th, 
+          #printable-receipt td {
+            color: #000000 !important;
+            font-weight: 700 !important;
           }
 
-          /* 5. Set printer paper size (80mm Thermal Paper) */
-          @page {
-            size: 80mm auto;
-            margin: 0mm;
+          #printable-receipt .flex {
+            display: flex !important;
           }
         }
       `}</style>
@@ -65,9 +85,9 @@ export default function ReceiptModal({ sale, onClose }) {
       <div id="print-root" className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 print:p-0 print:static print:bg-transparent">
         <div className="bg-white w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] print:max-h-none print:shadow-none print:w-full print:rounded-none">
           
-          {/* Header Actions (Hidden when printing) */}
+          {/* Header Actions */}
           <div className="p-4 bg-slate-100 border-b flex items-center justify-between print:hidden">
-            <span className="font-bold text-sm text-slate-700">Receipt Preview (80mm)</span>
+            <span className="font-bold text-sm text-slate-800">Receipt Preview (80mm)</span>
             <div className="flex gap-2">
               <button 
                 onClick={handlePrint}
@@ -84,101 +104,101 @@ export default function ReceiptModal({ sale, onClose }) {
             </div>
           </div>
 
-          {/* Printable Receipt Area */}
+          {/* High-Contrast Receipt Content */}
           <div 
             id="printable-receipt" 
-            className="p-6 overflow-y-auto font-mono text-xs text-slate-900 space-y-3 bg-white print:p-2 print:m-0 print:w-full print:overflow-visible"
+            className="p-6 overflow-y-auto font-mono text-xs text-black font-bold space-y-3 bg-white print:p-2 print:m-0 print:w-full print:overflow-visible"
           >
             <div className="text-center space-y-1">
-              <h2 className="text-sm font-black uppercase tracking-wider">GS BILLING PRO</h2>
-              <p className="text-[10px] text-slate-600">Store Counter Sales Receipt</p>
-              <p className="text-[10px] text-slate-400">------------------------------------------------</p>
+              <h2 className="text-base font-black uppercase tracking-wider text-black">GS BILLING PRO</h2>
+              <p className="text-[11px] text-black font-bold">Store Counter Sales Receipt</p>
+              <p className="text-[10px] text-black font-bold">------------------------------------------------</p>
             </div>
 
-            <div className="space-y-1 text-[11px]">
+            <div className="space-y-1 text-[11px] text-black">
               <div className="flex justify-between">
                 <span>Receipt No:</span>
-                <span className="font-bold">{sale.receipt_no || "N/A"}</span>
+                <span className="font-black">{sale.receipt_no || "N/A"}</span>
               </div>
               <div className="flex justify-between">
                 <span>Date:</span>
-                <span>{sale.created_at ? new Date(sale.created_at).toLocaleString() : new Date().toLocaleString()}</span>
+                <span className="font-bold">{sale.created_at ? new Date(sale.created_at).toLocaleString() : new Date().toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
                 <span>Cashier:</span>
-                <span>{sale.cashier || "Cashier"}</span>
+                <span className="font-bold">{sale.cashier || "Cashier"}</span>
               </div>
               {sale.customer_name && (
                 <div className="flex justify-between">
                   <span>Customer:</span>
-                  <span>{sale.customer_name} ({sale.customer_phone || ""})</span>
+                  <span className="font-bold">{sale.customer_name} ({sale.customer_phone || ""})</span>
                 </div>
               )}
             </div>
 
-            <div className="border-t border-dashed border-slate-400 pt-2">
+            <div className="border-t border-dashed border-black pt-2">
               <table className="w-full text-left">
                 <thead>
-                  <tr className="border-b border-dashed border-slate-300 text-[10px] text-slate-600">
+                  <tr className="border-b border-dashed border-black text-[11px] text-black font-black">
                     <th className="pb-1">Item</th>
                     <th className="pb-1 text-center">Qty</th>
                     <th className="pb-1 text-right">Price</th>
                     <th className="pb-1 text-right">Total</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-dashed divide-slate-200">
+                <tbody className="divide-y divide-dashed divide-black">
                   {sale.items && sale.items.map((item, idx) => (
-                    <tr key={idx} className="text-[11px]">
+                    <tr key={idx} className="text-[11px] text-black font-bold">
                       <td className="py-1 pr-1 truncate max-w-[100px]">{item.name}</td>
                       <td className="py-1 text-center">{item.quantity}</td>
                       <td className="py-1 text-right">{money(item.price)}</td>
-                      <td className="py-1 text-right font-bold">{money(item.subtotal)}</td>
+                      <td className="py-1 text-right font-black">{money(item.subtotal)}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
 
-            <div className="border-t border-dashed border-slate-400 pt-2 space-y-1 text-[11px]">
+            <div className="border-t border-dashed border-black pt-2 space-y-1 text-[11px] text-black">
               <div className="flex justify-between">
                 <span>Subtotal:</span>
-                <span>{money(sale.subtotal)}</span>
+                <span className="font-bold">{money(sale.subtotal)}</span>
               </div>
               <div className="flex justify-between">
                 <span>Tax (5%):</span>
-                <span>{money(sale.tax_amount || 0)}</span>
+                <span className="font-bold">{money(sale.tax_amount || 0)}</span>
               </div>
               {sale.discount > 0 && (
-                <div className="flex justify-between text-rose-600">
+                <div className="flex justify-between text-black">
                   <span>Discount:</span>
-                  <span>-{money(sale.discount)}</span>
+                  <span className="font-bold">-{money(sale.discount)}</span>
                 </div>
               )}
-              <div className="flex justify-between text-xs font-black pt-1 border-t border-slate-400">
+              <div className="flex justify-between text-xs font-black pt-1 border-t border-black">
                 <span>TOTAL:</span>
-                <span>{money(sale.total)}</span>
+                <span className="font-black">{money(sale.total)}</span>
               </div>
-              <div className="flex justify-between text-[10px] text-slate-600 pt-1">
+              <div className="flex justify-between text-[11px] text-black pt-1">
                 <span>Payment Mode:</span>
-                <span className="font-bold">{sale.payment_method || "CASH"}</span>
+                <span className="font-black">{sale.payment_method || "CASH"}</span>
               </div>
               {sale.payment_method === "CASH" && (
                 <>
-                  <div className="flex justify-between text-[10px] text-slate-600">
+                  <div className="flex justify-between text-[11px] text-black">
                     <span>Cash Paid:</span>
-                    <span>{money(sale.amount_paid || sale.total)}</span>
+                    <span className="font-bold">{money(sale.amount_paid || sale.total)}</span>
                   </div>
-                  <div className="flex justify-between text-[10px] text-slate-600">
+                  <div className="flex justify-between text-[11px] text-black">
                     <span>Change Due:</span>
-                    <span>{money(sale.change_due || 0)}</span>
+                    <span className="font-bold">{money(sale.change_due || 0)}</span>
                   </div>
                 </>
               )}
             </div>
 
-            <div className="text-center pt-3 space-y-1 text-[10px] text-slate-600 border-t border-dashed border-slate-400">
-              <p className="font-bold">Thank You! Visit Again!</p>
-              <p>Powered by GS Billing Pro</p>
+            <div className="text-center pt-3 space-y-1 text-[11px] text-black font-bold border-t border-dashed border-black">
+              <p className="font-black">Thank You! Visit Again!</p>
+              <p className="text-[10px]">Powered by GS Billing Pro</p>
             </div>
           </div>
 
