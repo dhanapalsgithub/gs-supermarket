@@ -6,6 +6,7 @@ load_dotenv(ROOT_DIR / '.env')
 from fastapi import FastAPI, APIRouter, HTTPException, Request, Depends, UploadFile, File
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
+from contextlib import asynccontextmanager
 import os
 import io
 import csv
@@ -18,6 +19,11 @@ from pydantic import BaseModel, Field, EmailStr
 from typing import List, Optional, Literal
 from datetime import datetime, timezone, timedelta
 
+# Logging Setup
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
+# Database Setup
 mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
@@ -25,18 +31,6 @@ db = client[os.environ['DB_NAME']]
 JWT_SECRET = os.environ['JWT_SECRET']
 JWT_ALG = "HS256"
 ACCESS_MIN = 60 * 24 * 7  # 7 days
-
-app = FastAPI(title="CashierPro API")
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-api = APIRouter(prefix="/api")
 
 def now_iso():
     return datetime.now(timezone.utc).isoformat()
@@ -84,6 +78,48 @@ async def require_staff(user: dict = Depends(get_current_user)) -> dict:
         raise HTTPException(status_code=403, detail="Staff only")
     return user
 
+# Lifespan context manager replacing deprecated @app.on_event
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup tasks
+    logger.info("Initializing database indexes and default admin user...")
+    await db.users.create_index("email", unique=True)
+    await db.products.create_index("barcode")
+    await db.orders.create_index("created_at")
+
+    owner_email = os.environ.get("ADMIN_EMAIL", "smallbiz743@gmail.com").lower()
+    owner_password = os.environ.get("ADMIN_PASSWORD", "Admin@123")
+    
+    existing = await db.users.find_one({"email": owner_email})
+    if not existing:
+        await db.users.insert_one({
+            "id": str(uuid.uuid4()), 
+            "email": owner_email, 
+            "password_hash": hash_pw(owner_password),
+            "name": "GS Owner", 
+            "role": "owner", 
+            "created_at": now_iso(),
+        })
+        logger.info(f"Default admin created for {owner_email}")
+
+    yield
+
+    # Shutdown tasks
+    logger.info("Closing MongoDB connection...")
+    client.close()
+
+app = FastAPI(title="CashierPro API", lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+api = APIRouter(prefix="/api")
+
 SETTINGS_ID = "app_settings"
 DEFAULT_SETTINGS = {
     "id": SETTINGS_ID,
@@ -100,6 +136,7 @@ async def get_settings():
         s = DEFAULT_SETTINGS.copy()
     return s
 
+# Pydantic Schemas
 class SettingsUpdate(BaseModel):
     sms_enabled: Optional[bool] = None
     payment_gateway: Optional[Literal["SIMULATED", "STRIPE", "RAZORPAY"]] = None
@@ -132,8 +169,8 @@ async def send_sms(phone: str, body: str) -> bool:
         to = f"+{to}"
     try:
         from twilio.rest import Client  # type: ignore
-        client = Client(sid, token)
-        await asyncio.to_thread(client.messages.create, body=body, from_=from_num, to=to)
+        tw_client = Client(sid, token)
+        await asyncio.to_thread(tw_client.messages.create, body=body, from_=from_num, to=to)
         return True
     except Exception:
         return False
@@ -216,6 +253,12 @@ class SupplierCreate(BaseModel):
     company: Optional[str] = None
     address: Optional[str] = None
 
+# Root level Endpoints
+@app.get("/")
+async def root():
+    return {"message": "GS Billing API", "brand": "GS", "built_by": "R I Billing Pro", "status": "active"}
+
+# API Router Endpoints
 @api.post("/auth/register")
 async def register(payload: RegisterInput):
     email = payload.email.lower().strip()
@@ -440,31 +483,5 @@ async def stats_summary():
         "pending_orders": await db.orders.count_documents({"order_status": {"$in": ["PENDING", "CONFIRMED"]}})
     }
 
-@api.get("/")
-async def root():
-    return {"message": "GS Billing API", "brand": "GS", "built_by": "R I Billing Pro"}
-
+# Include API Router
 app.include_router(api)
-
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
-
-@app.on_event("startup")
-async def _startup():
-    await db.users.create_index("email", unique=True)
-    await db.products.create_index("barcode")
-    await db.orders.create_index("created_at")
-
-    owner_email = os.environ.get("ADMIN_EMAIL", "smallbiz743@gmail.com").lower()
-    owner_password = os.environ.get("ADMIN_PASSWORD", "Admin@123")
-    
-    existing = await db.users.find_one({"email": owner_email})
-    if not existing:
-        await db.users.insert_one({
-            "id": str(uuid.uuid4()), "email": owner_email, "password_hash": hash_pw(owner_password),
-            "name": "GS Owner", "role": "owner", "created_at": now_iso(),
-        })
-
-@app.on_event("shutdown")
-async def _shutdown():
-    client.close()
