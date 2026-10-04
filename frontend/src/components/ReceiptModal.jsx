@@ -11,63 +11,77 @@ export default function ReceiptModal({ sale, onClose }) {
 
   return (
     <>
-     <style>{`
-  @media print {
-    @page {
-      size: 80mm auto !important;
-      margin: 0mm !important;
-    }
+      <style>{`
+        @media print {
+          /* 1. Page Setup */
+          @page {
+            size: 80mm auto !important;
+            margin: 0mm !important;
+          }
 
-    html, body {
-      margin: 0 !important;
-      padding: 0 !important;
-      height: auto !important;
-      overflow: visible !important;
-      background: #ffffff !important;
-    }
+          /* 2. Reset Page Elements */
+          html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 100% !important;
+            height: auto !important;
+            background: #ffffff !important;
+            color: #000000 !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
 
-    /* Hide background page elements */
-    body > * {
-      display: none !important;
-    }
+          /* 3. Hide all standard DOM content during print */
+          body * {
+            visibility: hidden !important;
+          }
 
-    /* Target modal container directly */
-    #print-receipt-wrapper {
-      display: block !important;
-      visibility: visible !important;
-      position: relative !important; /* Prevents push-down page breaks */
-      top: 0 !important;
-      left: 0 !important;
-      width: 100% !important;
-      margin: 0 !important;
-      padding: 0 !important;
-      page-break-inside: avoid !important;
-      break-inside: avoid !important;
-    }
+          /* 4. Force printable section and children to remain visible */
+          .printable-receipt-area, 
+          .printable-receipt-area * {
+            visibility: visible !important;
+          }
 
-    #print-receipt-wrapper * {
-      visibility: visible !important;
-    }
+          /* 5. Pin receipt at top-left corner of thermal roll */
+          .printable-receipt-area {
+            position: fixed !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 80mm !important;
+            margin: 0 !important;
+            padding: 2mm !important;
+            background: #ffffff !important;
+            box-shadow: none !important;
+            display: block !important;
+            z-index: 99999 !important;
+          }
 
-    #printable-receipt {
-      display: block !important;
-      width: 100% !important;
-      padding: 2mm !important;
-      margin: 0 !important;
-      page-break-inside: avoid !important;
-      break-inside: avoid !important;
-    }
-  }
-`}</style>
+          #printable-receipt {
+            width: 100% !important;
+            font-family: 'Courier New', Courier, monospace !important;
+            font-size: 12px !important;
+            line-height: 1.3 !important;
+            color: #000000 !important;
+          }
+
+          #printable-receipt table {
+            width: 100% !important;
+            border-collapse: collapse !important;
+          }
+
+          #printable-receipt th, 
+          #printable-receipt td {
+            color: #000000 !important;
+            font-weight: 700 !important;
+          }
+        }
+      `}</style>
 
       {/* Main Overlay Modal */}
       <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 print:p-0 print:bg-transparent print:static">
         
         {/* Modal Card Wrapper */}
-        <div 
-          id="print-receipt-wrapper" 
-          className="bg-white w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] print:max-h-none print:shadow-none print:w-full print:rounded-none"
-        >
+        <div className="printable-receipt-area bg-white w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] print:max-h-none print:shadow-none print:w-full print:rounded-none">
           
           {/* Action Bar (Hidden when printing) */}
           <div className="p-4 bg-slate-100 border-b flex items-center justify-between print:hidden">
