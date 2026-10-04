@@ -12,74 +12,56 @@ export default function ReceiptModal({ sale, onClose }) {
   return (
     <>
       {/* Thermal Printer Print Styles Fix */}
-     <style>{`
-  @media print {
-    @page {
-      size: 80mm auto !important;
-      margin: 0mm !important;
-    }
+      <style>{`
+        @media print {
+          /* 1. Reset Body & Hide All Page Content Except Receipt Container */
+          body {
+            visibility: hidden !important;
+            background: #ffffff !important;
+          }
 
-    html, body {
-      margin: 0 !important;
-      padding: 0 !important;
-      background: #ffffff !important;
-      color: #000000 !important;
-      -webkit-print-color-adjust: exact !important;
-      print-color-adjust: exact !important;
-    }
+          /* 2. Target Print Container & Make visible */
+          #print-root, #print-root * {
+            visibility: visible !important;
+          }
 
-    body > * {
-      display: none !important;
-    }
+          /* 3. Position the printable receipt to top left corner */
+          #print-root {
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 80mm !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            background: #ffffff !important;
+            box-shadow: none !important;
+          }
 
-    #print-root {
-      display: block !important;
-      visibility: visible !important;
-      position: absolute !important;
-      left: 0 !important;
-      top: 0 !important;
-      width: 100% !important;
-      margin: 0 !important;
-      padding: 0 !important;
-      background: #ffffff !important;
-    }
+          #printable-receipt {
+            width: 100% !important;
+            padding: 4mm !important;
+            margin: 0 !important;
+            color: #000000 !important;
+          }
 
-    #print-root * {
-      display: revert !important;
-      visibility: visible !important;
-      color: #000000 !important; /* Force true black for thermal heating */
-      font-weight: 700 !important; /* Make fonts bold & sharp */
-      opacity: 1 !important;
-    }
+          /* 4. Display alignment fixes */
+          #printable-receipt table {
+            width: 100% !important;
+            border-collapse: collapse !important;
+          }
+          
+          #printable-receipt .flex {
+            display: flex !important;
+          }
 
-    #printable-receipt {
-      display: block !important;
-      width: 100% !important;
-      max-width: 80mm !important;
-      padding: 2mm !important;
-      margin: 0 !important;
-      font-family: 'Courier New', Courier, monospace !important;
-      font-size: 12px !important;
-      line-height: 1.3 !important;
-      color: #000000 !important;
-    }
+          /* 5. Set printer paper size (80mm Thermal Paper) */
+          @page {
+            size: 80mm auto;
+            margin: 0mm;
+          }
+        }
+      `}</style>
 
-    #printable-receipt table {
-      width: 100% !important;
-      border-collapse: collapse !important;
-    }
-
-    #printable-receipt th, 
-    #printable-receipt td {
-      color: #000000 !important;
-      font-weight: 700 !important;
-    }
-
-    #printable-receipt .flex {
-      display: flex !important;
-    }
-  }
-`}</style>
       <div id="print-root" className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 print:p-0 print:static print:bg-transparent">
         <div className="bg-white w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] print:max-h-none print:shadow-none print:w-full print:rounded-none">
           
