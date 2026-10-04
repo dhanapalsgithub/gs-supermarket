@@ -70,21 +70,21 @@ export default function ReceiptModal({ sale, onClose }) {
 
       {/* Screen Overlay Container */}
       <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
-        
+
         {/* Modal Card */}
         <div className="bg-white w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-          
+
           {/* Header - Screen Only */}
           <div className="p-4 bg-slate-100 border-b flex items-center justify-between print:hidden">
             <span className="font-bold text-sm text-slate-800">Receipt Preview (80mm)</span>
             <div className="flex gap-2">
-              <button 
+              <button
                 onClick={handlePrint}
                 className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 hover:bg-indigo-700"
               >
                 <Printer className="w-3.5 h-3.5" /> Print
               </button>
-              <button 
+              <button
                 onClick={onClose}
                 className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-200"
               >
@@ -95,14 +95,33 @@ export default function ReceiptModal({ sale, onClose }) {
 
           {/* Targeted Print Container */}
           <div id="print-area">
-            <div 
-              id="printable-receipt" 
+            <div
+              id="printable-receipt"
               className="p-6 overflow-y-auto font-mono text-xs text-black font-bold space-y-3 bg-white print:p-0 print:m-0"
             >
-              <div className="text-center space-y-1">
-                <h2 className="text-base font-black uppercase tracking-wider text-black">GS BILLING PRO</h2>
-                <p className="text-[11px] text-black font-bold">Store Counter Sales Receipt</p>
-                <p className="text-[10px] text-black font-bold">------------------------------------------------</p>
+              <div className="text-center space-y-1 flex flex-col items-center">
+                {/* Receipt Logo */}
+                <img
+                  src="/icon-512.png"
+                  alt="Logo"
+                  className="w-12 h-12 mx-auto mb-1 object-contain print:w-10 print:h-10"
+                />
+
+                <h2 className="text-base font-black uppercase tracking-wider text-black leading-tight">
+                  GS BILLING PRO
+                </h2>
+
+                <p className="text-[10px] text-black font-bold max-w-[220px] mx-auto leading-tight">
+                  No 1/10, Anna Durai Main Road, Parivakkam, Poonamallee, Chennai - 600056
+                </p>
+
+                <p className="text-[11px] text-black font-bold pt-0.5">
+                  Store Counter Sales Receipt
+                </p>
+
+                <p className="text-[10px] text-black font-bold">
+                  ------------------------------------------------
+                </p>
               </div>
 
               <div className="space-y-1 text-[11px] text-black">
@@ -188,7 +207,7 @@ export default function ReceiptModal({ sale, onClose }) {
 
               <div className="text-center pt-3 space-y-1 text-[11px] text-black font-bold border-t border-dashed border-black">
                 <p className="font-black">Thank You! Visit Again!</p>
-                <p className="text-[10px]">Powered by GS Billing Pro</p>
+                <p className="text-[10px]">Powered by R I  Billing Pro</p>
               </div>
             </div>
           </div>
