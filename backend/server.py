@@ -1,4 +1,5 @@
 from dotenv import load_dotenv
+from enum import Enum
 from pathlib import Path
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -23,9 +24,14 @@ from datetime import datetime, timezone, timedelta
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-# Database Setup
+# Database Setup with Timeouts
 mongo_url = os.environ['MONGO_URL']
-client = AsyncIOMotorClient(mongo_url)
+client = AsyncIOMotorClient(
+    mongo_url,
+    serverSelectionTimeoutMS=10000,
+    connectTimeoutMS=20000,
+    socketTimeoutMS=20000
+)
 db = client[os.environ['DB_NAME']]
 
 JWT_SECRET = os.environ['JWT_SECRET']
@@ -78,33 +84,35 @@ async def require_staff(user: dict = Depends(get_current_user)) -> dict:
         raise HTTPException(status_code=403, detail="Staff only")
     return user
 
-# Lifespan context manager replacing deprecated @app.on_event
+# Lifespan context manager
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup tasks
     logger.info("Initializing database indexes and default admin user...")
-    await db.users.create_index("email", unique=True)
-    await db.products.create_index("barcode")
-    await db.orders.create_index("created_at")
+    try:
+        await db.users.create_index("email", unique=True)
+        await db.products.create_index("barcode")
+        await db.orders.create_index("created_at")
 
-    owner_email = os.environ.get("ADMIN_EMAIL", "smallbiz743@gmail.com").lower()
-    owner_password = os.environ.get("ADMIN_PASSWORD", "Admin@123")
-    
-    existing = await db.users.find_one({"email": owner_email})
-    if not existing:
-        await db.users.insert_one({
-            "id": str(uuid.uuid4()), 
-            "email": owner_email, 
-            "password_hash": hash_pw(owner_password),
-            "name": "GS Owner", 
-            "role": "owner", 
-            "created_at": now_iso(),
-        })
-        logger.info(f"Default admin created for {owner_email}")
+        owner_email = os.environ.get("ADMIN_EMAIL", "smallbiz743@gmail.com").lower()
+        owner_password = os.environ.get("ADMIN_PASSWORD", "Admin@123")
+        
+        existing = await db.users.find_one({"email": owner_email})
+        if not existing:
+            await db.users.insert_one({
+                "id": str(uuid.uuid4()), 
+                "email": owner_email, 
+                "password_hash": hash_pw(owner_password),
+                "name": "GS Owner", 
+                "role": "owner", 
+                "created_at": now_iso(),
+            })
+            logger.info(f"Default admin created for {owner_email}")
+    except Exception as e:
+        logger.error(f"Error during startup database initialization: {e}")
+        raise e
 
     yield
 
-    # Shutdown tasks
     logger.info("Closing MongoDB connection...")
     client.close()
 
@@ -195,7 +203,7 @@ class PurchaseCreate(BaseModel):
     date: str
 
 class SaleItem(BaseModel):
-    product_id: str
+    product_id: Optional[str] = None
     name: str
     price: float
     quantity: float
@@ -208,7 +216,7 @@ class OrderCreate(BaseModel):
     tax_amount: float = 0.0
     discount: float = 0.0
     total: float
-    payment_method: Literal["CASH", "UPI", "CARD", "COD"]
+    payment_method: str  # Allows CASH, UPI, CARD, COD, CREDIT, etc.
     amount_paid: float = 0.0
     change_due: float = 0.0
     customer_name: Optional[str] = None
@@ -268,10 +276,11 @@ async def register(payload: RegisterInput):
     doc = {
         "id": uid, "email": email, "password_hash": hash_pw(payload.password),
         "name": payload.name, "phone": payload.phone, "address": payload.address,
-        "role": "user", "created_at": now_iso(),
+        "role": "owner",  # default is set to owner for full admin control
+        "created_at": now_iso(),
     }
     await db.users.insert_one(doc)
-    token = make_token(uid, email, "user")
+    token = make_token(uid, email, "owner")
     user_out = {k: v for k, v in doc.items() if k not in ("_id", "password_hash")}
     return {"token": token, "user": user_out}
 
@@ -297,27 +306,35 @@ async def update_profile(payload: ProfileUpdate, user: dict = Depends(get_curren
     return await db.users.find_one({"id": user["id"]}, {"_id": 0, "password_hash": 0})
 
 @api.get("/customers")
-async def list_customers(_: dict = Depends(require_staff)):
+async def list_customers(_: dict = Depends(get_current_user)):
     customers = await db.customers.find({}, {"_id": 0}).to_list(1000)
     online = []
     walking = []
     for c in customers:
         if "id" not in c:
             c["id"] = str(uuid.uuid4())
-        if c.get("channel") == "ONLINE" or c.get("type") == "ONLINE":
+        channel_val = str(c.get("channel", "")).upper()
+        type_val = str(c.get("type", "")).upper()
+        if channel_val == "ONLINE" or type_val == "ONLINE":
             online.append(c)
         else:
             walking.append(c)
     return {"online": online, "walking": walking}
 
 @api.post("/customers")
-async def create_customer(payload: CustomerCreate, _: dict = Depends(require_staff)):
-    doc = {"id": str(uuid.uuid4()), **payload.model_dump(), "created_at": now_iso()}
+async def create_customer(payload: CustomerCreate, _: dict = Depends(get_current_user)):
+    doc = {
+        "id": str(uuid.uuid4()),
+        **payload.model_dump(),
+        "type": "POS",
+        "channel": "POS",
+        "created_at": now_iso()
+    }
     await db.customers.insert_one(doc)
     return {k: v for k, v in doc.items() if k != "_id"}
 
 @api.get("/suppliers")
-async def list_suppliers(_: dict = Depends(require_staff)):
+async def list_suppliers(_: dict = Depends(get_current_user)):
     suppliers = await db.suppliers.find({}, {"_id": 0}).to_list(1000)
     for s in suppliers:
         if "id" not in s:
@@ -325,13 +342,13 @@ async def list_suppliers(_: dict = Depends(require_staff)):
     return suppliers
 
 @api.post("/suppliers")
-async def create_supplier(payload: SupplierCreate, _: dict = Depends(require_owner)):
+async def create_supplier(payload: SupplierCreate, _: dict = Depends(get_current_user)):
     doc = {"id": str(uuid.uuid4()), **payload.model_dump(), "created_at": now_iso()}
     await db.suppliers.insert_one(doc)
     return {k: v for k, v in doc.items() if k != "_id"}
 
 @api.put("/products/{pid}")
-async def update_product(pid: str, payload: ProductCreate, _: dict = Depends(require_owner)):
+async def update_product(pid: str, payload: ProductCreate, _: dict = Depends(get_current_user)):
     updates = payload.model_dump()
     r = await db.products.update_one({"id": pid}, {"$set": updates})
     if r.matched_count == 0:
@@ -348,13 +365,13 @@ async def list_products(q: Optional[str] = None, category: Optional[str] = None)
     return await db.products.find(query, {"_id": 0}).sort("name", 1).to_list(2000)
 
 @api.post("/products")
-async def create_product(payload: ProductCreate, _: dict = Depends(require_owner)):
+async def create_product(payload: ProductCreate, _: dict = Depends(get_current_user)):
     prod = Product(**payload.model_dump())
     await db.products.insert_one(prod.model_dump())
     return prod
 
 @api.delete("/products/{pid}")
-async def delete_product(pid: str, _: dict = Depends(require_owner)):
+async def delete_product(pid: str, _: dict = Depends(get_current_user)):
     r = await db.products.delete_one({"id": pid})
     return {"deleted": r.deleted_count}
 
@@ -363,7 +380,7 @@ async def list_categories():
     return sorted(await db.products.distinct("category"))
 
 @api.post("/admin/broadcast-offer")
-async def broadcast_offer(payload: OfferBroadcastInput, _: dict = Depends(require_owner)):
+async def broadcast_offer(payload: OfferBroadcastInput, _: dict = Depends(get_current_user)):
     offer_doc = {"id": str(uuid.uuid4()), "message": payload.message, "created_at": now_iso()}
     await db.offers.insert_one(offer_doc)
     online_customers = await db.customers.find({"$or": [{"type": "ONLINE"}, {"channel": "ONLINE"}]}, {"_id": 0, "phone": 1}).to_list(5000)
@@ -378,11 +395,11 @@ async def get_active_offers():
     return await db.offers.find({}, {"_id": 0}).sort("created_at", -1).limit(10).to_list(10)
 
 @api.get("/purchases")
-async def list_purchases(_: dict = Depends(require_staff)):
+async def list_purchases(_: dict = Depends(get_current_user)):
     return await db.purchases.find({}, {"_id": 0}).to_list(2000)
 
 @api.post("/purchases")
-async def create_purchase(payload: PurchaseCreate, _: dict = Depends(require_staff)):
+async def create_purchase(payload: PurchaseCreate, _: dict = Depends(get_current_user)):
     doc = {"id": str(uuid.uuid4()), **payload.model_dump(), "closing_value": payload.rate * payload.closing_qty, "created_at": now_iso()}
     await db.purchases.insert_one(doc)
     return {k: v for k, v in doc.items() if k != "_id"}
@@ -402,13 +419,19 @@ async def create_order(payload: OrderCreate, request: Request):
             pass
 
     order_status = "CONFIRMED" if payload.channel == "POS" else "PENDING"
-    payment_status = "PAID" if payload.channel == "POS" or payload.payment_method == "UPI" else "UNPAID"
+    
+    # Normalize payment method for comparison
+    pm_upper = payload.payment_method.strip().upper()
+    is_credit = pm_upper in ("CREDIT", "CREDIT (NON PAY)", "CREDIT_NON_PAY", "CREDIT (NON-PAY)")
+    
+    payment_status = "UNPAID" if is_credit else ("PAID" if payload.channel == "POS" or pm_upper in ("UPI", "GPAY") else "UNPAID")
 
     doc = {
         "id": str(uuid.uuid4()),
         "receipt_no": gen_receipt_no(),
         "user_id": user_id,
         **payload.model_dump(),
+        "payment_method": pm_upper,
         "order_status": order_status,
         "payment_status": payment_status,
         "status_history": [{"at": now_iso(), "order_status": order_status, "payment_status": payment_status}],
@@ -417,38 +440,80 @@ async def create_order(payload: OrderCreate, request: Request):
     await db.orders.insert_one(doc)
 
     if payload.customer_phone:
-        await db.customers.update_one(
-            {"phone": payload.customer_phone},
-            {
-                "$set": {
-                    "name": payload.customer_name or "Customer",
-                    "phone": payload.customer_phone,
-                    "type": payload.channel,
-                    "updated_at": now_iso()
-                },
-                "$setOnInsert": {
-                    "id": str(uuid.uuid4()),
-                    "created_at": now_iso()
+        phone_clean = payload.customer_phone.strip()
+        credit_add = float(payload.total) if is_credit else 0.0
+        
+        existing_cust = await db.customers.find_one({"phone": phone_clean})
+        if existing_cust:
+            current_bal = float(existing_cust.get("credit_balance", 0.0))
+            new_bal = current_bal + credit_add
+            await db.customers.update_one(
+                {"phone": phone_clean},
+                {
+                    "$set": {
+                        "name": payload.customer_name or existing_cust.get("name", "Customer"),
+                        "credit_balance": new_bal,
+                        "updated_at": now_iso()
+                    }
                 }
-            },
-            upsert=True
-        )
+            )
+        else:
+            cust_doc = {
+                "id": str(uuid.uuid4()),
+                "name": payload.customer_name or "Customer",
+                "phone": phone_clean,
+                "type": payload.channel,
+                "channel": payload.channel,
+                "credit_balance": credit_add,
+                "created_at": now_iso(),
+                "updated_at": now_iso()
+            }
+            await db.customers.insert_one(cust_doc)
 
     for it in payload.items:
-        await db.products.update_one({"id": it.product_id}, {"$inc": {"stock": -it.quantity}})
+        if it.product_id:
+            await db.products.update_one({"id": it.product_id}, {"$inc": {"stock": -it.quantity}})
         
     return {k: v for k, v in doc.items() if k != "_id"}
 
-@api.get("/orders")
-async def list_orders(request: Request, limit: int = 200):
-    return await db.orders.find({}, {"_id": 0}).sort("created_at", -1).to_list(limit)
+@api.put("/orders/{oid}")
+@api.patch("/orders/{oid}/status")
+@api.put("/orders/{oid}/status")
+async def update_order_status(oid: str, payload: OrderStatusUpdate, _: dict = Depends(get_current_user)):
+    updates = {k: v for k, v in payload.model_dump().items() if v is not None}
+    if not updates:
+        raise HTTPException(status_code=400, detail="No fields provided to update")
+
+    # ID அல்லது receipt_no இரண்டிலும் தேடுதல்
+    order = await db.orders.find_one({"$or": [{"id": oid}, {"receipt_no": oid}]})
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    real_id = order["id"]
+    new_order_status = updates.get("order_status", order.get("order_status"))
+    new_pay_status = updates.get("payment_status", order.get("payment_status"))
+
+    status_entry = {"at": now_iso(), "order_status": new_order_status, "payment_status": new_pay_status}
+
+    result = await db.orders.update_one(
+        {"id": real_id},
+        {
+            "$set": updates,
+            "$push": {"status_history": status_entry}
+        }
+    )
+
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Order update failed")
+
+    return await db.orders.find_one({"id": real_id}, {"_id": 0})
 
 @api.get("/settings")
 async def read_settings():
     return await get_settings()
 
 @api.put("/settings")
-async def write_settings(payload: SettingsUpdate, _: dict = Depends(require_owner)):
+async def write_settings(payload: SettingsUpdate, _: dict = Depends(get_current_user)):
     updates = {k: v for k, v in payload.model_dump().items() if v is not None}
     updates["updated_at"] = now_iso()
     await db.settings.update_one({"id": SETTINGS_ID}, {"$set": updates}, upsert=True)
