@@ -13,77 +13,68 @@ export default function ReceiptModal({ sale, onClose }) {
     <>
       <style>{`
         @media print {
-          /* 1. Page Setup */
           @page {
             size: 80mm auto !important;
             margin: 0mm !important;
           }
 
-          /* 2. Reset Page Elements */
+          /* Hide ALL standard website content on print */
+          body > * {
+            display: none !important;
+          }
+
+          /* Force ONLY the receipt modal wrapper to render */
+          body > #thermal-print-wrapper {
+            display: block !important;
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            background: #ffffff !important;
+          }
+
+          /* General print resets */
           html, body {
             margin: 0 !important;
             padding: 0 !important;
-            width: 100% !important;
-            height: auto !important;
             background: #ffffff !important;
             color: #000000 !important;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
           }
 
-          /* 3. Hide all standard DOM content during print */
-          body * {
-            visibility: hidden !important;
-          }
-
-          /* 4. Force printable section and children to remain visible */
-          .printable-receipt-area, 
-          .printable-receipt-area * {
-            visibility: visible !important;
-          }
-
-          /* 5. Pin receipt at top-left corner of thermal roll */
-          .printable-receipt-area {
-            position: fixed !important;
-            left: 0 !important;
-            top: 0 !important;
-            width: 80mm !important;
-            margin: 0 !important;
-            padding: 2mm !important;
-            background: #ffffff !important;
-            box-shadow: none !important;
-            display: block !important;
-            z-index: 99999 !important;
-          }
-
           #printable-receipt {
+            display: block !important;
             width: 100% !important;
+            max-width: 80mm !important;
+            padding: 2mm !important;
+            margin: 0 !important;
             font-family: 'Courier New', Courier, monospace !important;
             font-size: 12px !important;
             line-height: 1.3 !important;
             color: #000000 !important;
           }
 
+          #printable-receipt * {
+            color: #000000 !important;
+            font-weight: 700 !important;
+          }
+
           #printable-receipt table {
             width: 100% !important;
             border-collapse: collapse !important;
           }
-
-          #printable-receipt th, 
-          #printable-receipt td {
-            color: #000000 !important;
-            font-weight: 700 !important;
-          }
         }
       `}</style>
 
-      {/* Main Overlay Modal */}
-      <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 print:p-0 print:bg-transparent print:static">
+      {/* Direct Body Top Wrapper for Printing */}
+      <div id="thermal-print-wrapper" className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 print:p-0 print:static print:bg-transparent">
         
-        {/* Modal Card Wrapper */}
-        <div className="printable-receipt-area bg-white w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] print:max-h-none print:shadow-none print:w-full print:rounded-none">
+        <div className="bg-white w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] print:max-h-none print:shadow-none print:w-full print:rounded-none">
           
-          {/* Action Bar (Hidden when printing) */}
+          {/* On-screen Header / Print Button */}
           <div className="p-4 bg-slate-100 border-b flex items-center justify-between print:hidden">
             <span className="font-bold text-sm text-slate-800">Receipt Preview (80mm)</span>
             <div className="flex gap-2">
