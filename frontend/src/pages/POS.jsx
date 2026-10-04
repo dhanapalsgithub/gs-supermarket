@@ -31,6 +31,10 @@ export default function POS() {
   const [page, setPage] = useState(1);
   const scanRef = useRef(null);
 
+  /* State for custom / "Other" billing items */
+  const [showCustomModal, setShowCustomModal] = useState(false);
+  const [customItem, setCustomItem] = useState({ name: "Other Item", price: "" });
+
   const load = useCallback(async () => {
     try {
       const [p, c] = await Promise.all([fetchProducts(), fetchCategories()]);
@@ -69,6 +73,29 @@ export default function POS() {
     });
     toast.success(`Added ${p.name}`, { duration: 1000 });
   }, []);
+
+  /* Add ad-hoc / new items into live cart */
+  const addCustomToCart = (e) => {
+    e.preventDefault();
+    const priceNum = parseFloat(customItem.price);
+    if (!customItem.name.trim() || isNaN(priceNum) || priceNum <= 0) {
+      return toast.error("Please enter a valid item name and price");
+    }
+
+    const tempProduct = {
+      product_id: `custom-${Date.now()}`,
+      name: customItem.name.trim(),
+      price: priceNum,
+      quantity: 1,
+      subtotal: priceNum,
+      unit: "pcs",
+    };
+
+    setCart((prev) => [...prev, tempProduct]);
+    toast.success(`Added ${tempProduct.name}`);
+    setCustomItem({ name: "Other Item", price: "" });
+    setShowCustomModal(false);
+  };
 
   const updateQty = (id, delta) =>
     setCart((c) => c.map((it) => it.product_id === id ? { ...it, quantity: Math.max(0, it.quantity + delta), subtotal: Math.max(0, (it.quantity + delta) * it.price) } : it).filter((it) => it.quantity > 0));
@@ -120,19 +147,40 @@ export default function POS() {
     if (method === "CASH" && Number(amountPaid) < total) return toast.error("Insufficient cash");
     try {
       const order = await createOrder({
-        items: cart.map((c) => ({ product_id: c.product_id, name: c.name, price: c.price, quantity: c.quantity, subtotal: c.subtotal })),
-        subtotal, tax_rate: TAX_RATE, tax_amount: tax, discount: Number(discount || 0), total,
-        payment_method: method, amount_paid: Number(amountPaid || total), change_due: changeDue,
-        customer_name: customer.name || null, customer_phone: customer.phone || null,
-        channel: "POS", order_type: "STORE_BILL", cashier: user?.name || "Cashier",
+        items: cart.map((c) => ({ 
+          product_id: c.product_id, 
+          name: c.name, 
+          price: c.price, 
+          quantity: c.quantity, 
+          subtotal: c.subtotal 
+        })),
+        subtotal, 
+        tax_rate: TAX_RATE, 
+        tax_amount: tax, 
+        discount: Number(discount || 0), 
+        total,
+        payment_method: method, 
+        amount_paid: Number(amountPaid || total), 
+        change_due: changeDue,
+        customer_name: customer.name || null, 
+        customer_phone: customer.phone || null,
+        channel: "POS", 
+        order_type: "STORE_BILL", 
+        cashier: user?.name || "Cashier",
       });
+
       if (usbConnected && isUsbConnected()) {
         try { await printUsbReceipt(order); } catch {}
       }
       setReceipt(order);
-      setShowPay(false); clearCart(); load();
+      setShowPay(false); 
+      clearCart(); 
+      load();
       toast.success("Store Bill Generated Successfully");
-    } catch { toast.error("Failed to record sale"); }
+    } catch (err) { 
+      console.error("Order Creation Error:", err);
+      toast.error("Failed to record sale"); 
+    }
   };
 
   const handlePhoneChange = async (e) => {
@@ -167,12 +215,22 @@ export default function POS() {
 
       <div className="flex-1 min-h-0 grid grid-cols-12">
         <section className="col-span-12 lg:col-span-8 border-r border-white/50 flex flex-col min-h-0">
-          <div className="px-4 md:px-6 py-4 flex gap-2 overflow-x-auto">
-            {["ALL", ...cats].map((c) => (
-              <button key={c} onClick={() => setActiveCat(c)} className={`chip whitespace-nowrap ${activeCat === c ? "chip-on" : "chip-off"}`}>
-                {catLabel(c)}
-              </button>
-            ))}
+          <div className="px-4 md:px-6 py-4 flex items-center justify-between gap-2 overflow-x-auto">
+            <div className="flex gap-2 overflow-x-auto">
+              {["ALL", ...cats].map((c) => (
+                <button key={c} onClick={() => setActiveCat(c)} className={`chip whitespace-nowrap ${activeCat === c ? "chip-on" : "chip-off"}`}>
+                  {catLabel(c)}
+                </button>
+              ))}
+            </div>
+
+            {/* Quick Action to Add Custom / Other Items */}
+            <button 
+              onClick={() => setShowCustomModal(true)} 
+              className="chip chip-off flex items-center gap-1.5 whitespace-nowrap border-dashed border-indigo-400 text-indigo-600 font-bold shrink-0"
+            >
+              <Plus className="w-3.5 h-3.5" /> + Custom / Other
+            </button>
           </div>
           
           <div className="flex-1 overflow-y-auto px-4 md:px-6 pb-2 flex flex-col justify-between">
@@ -249,6 +307,53 @@ export default function POS() {
           </div>
         </aside>
       </div>
+
+      {/* Modal: Add Other / Custom Item */}
+      {showCustomModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <form onSubmit={addCustomToCart} className="w-full max-w-md glass-strong p-6 space-y-4">
+            <div className="flex justify-between items-center">
+              <div className="text-lg font-extrabold">Add Custom / Other Item</div>
+              <button type="button" onClick={() => setShowCustomModal(false)} className="text-slate-400 hover:text-slate-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div>
+              <label className="text-xs text-slate-500 mb-1 block">Item Name / Description</label>
+              <input
+                type="text"
+                placeholder="e.g. Miscellaneous Item"
+                value={customItem.name}
+                onChange={(e) => setCustomItem({ ...customItem, name: e.target.value })}
+                className="field"
+                autoFocus
+              />
+            </div>
+
+            <div>
+              <label className="text-xs text-slate-500 mb-1 block">Price</label>
+              <input
+                type="number"
+                step="0.01"
+                placeholder="0.00"
+                value={customItem.price}
+                onChange={(e) => setCustomItem({ ...customItem, price: e.target.value })}
+                className="field font-mono-num"
+              />
+            </div>
+
+            <div className="flex gap-2 pt-2">
+              <button type="button" onClick={() => setShowCustomModal(false)} className="chip chip-off flex-1 py-3 justify-center">
+                Cancel
+              </button>
+              <button type="submit" className="btn-primary flex-1 py-3 rounded-xl font-bold">
+                Add to Bill
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
 
       {showPay && (
         <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
