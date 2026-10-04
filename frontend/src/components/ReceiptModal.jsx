@@ -104,7 +104,7 @@ export default function ReceiptModal({ sale, onClose }) {
                 <img
                   src="/icon-513.png"
                   alt="Logo"
-                  className="w-12 h-12 mx-auto mb-1 object-contain print:w-10 print:h-10"
+                  className="w-28 h-28 mx-auto mb-1 object-contain print:w-10 print:h-10"
                 />
 
                 <h2 className="text-base font-black uppercase tracking-wider text-black leading-tight">
