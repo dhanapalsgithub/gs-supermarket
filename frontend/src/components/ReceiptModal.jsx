@@ -183,10 +183,10 @@ export default function ReceiptModal({ sale, onClose }) {
                   <span>Subtotal:</span>
                   <span className="font-bold">{money(sale.subtotal)}</span>
                 </div>
-                <div className="flex justify-between">
+                 <div className="flex justify-between">
                   <span>Tax (5%):</span>
                   <span className="font-bold">{money(sale.tax_amount || 0)}</span>
-                </div>
+                </div> 
                 {sale.discount > 0 && (
                   <div className="flex justify-between text-black">
                     <span>Discount:</span>

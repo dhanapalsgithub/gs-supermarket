@@ -9,7 +9,7 @@ import { connectUsbPrinter, isUsbAvailable, isUsbConnected, printUsbReceipt, dis
 import ReceiptModal from "../components/ReceiptModal";
 import { useAuth } from "../context/AuthContext";
 
-const TAX_RATE = 0.05;
+const TAX_RATE = 0.00;
 const PAGE_SIZE = 6;
 
 export default function POS() {
@@ -33,7 +33,7 @@ export default function POS() {
 
   /* State for custom / "Other" billing items */
   const [showCustomModal, setShowCustomModal] = useState(false);
-  const [customItem, setCustomItem] = useState({ name: "Other Item", price: "" });
+  const [customItem, setCustomItem] = useState({ name: "", price: "" });
 
   const load = useCallback(async () => {
     try {
@@ -93,7 +93,7 @@ export default function POS() {
 
     setCart((prev) => [...prev, tempProduct]);
     toast.success(`Added ${tempProduct.name}`);
-    setCustomItem({ name: "Other Item", price: "" });
+    setCustomItem({ name: "", price: "" });
     setShowCustomModal(false);
   };
 
@@ -293,7 +293,7 @@ export default function POS() {
 
           <div className="border-t border-white/50 p-4 space-y-2 text-sm bg-white/50">
             <div className="flex items-center justify-between"><span className="text-slate-500">Subtotal</span><span className="font-mono-num">{money(subtotal)}</span></div>
-            <div className="flex items-center justify-between"><span className="text-slate-500">Tax (5%)</span><span className="font-mono-num">{money(tax)}</span></div>
+             <div className="flex items-center justify-between"><span className="text-slate-500">Tax (5%)</span><span className="font-mono-num">{money(tax)}</span></div> 
             <div className="pt-2 flex items-end justify-between border-t border-dashed">
               <span className="label-cap">Grand Total</span>
               <span className="text-2xl font-mono-num font-extrabold">{money(total)}</span>
