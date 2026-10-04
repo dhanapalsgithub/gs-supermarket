@@ -14,52 +14,64 @@ export default function ReceiptModal({ sale, onClose }) {
       {/* Thermal Printer Print Styles Fix */}
      <style>{`
   @media print {
-    /* 1. Remove standard browser margins and page spacing */
+    /* 1. Reset printer page defaults */
     @page {
-      size: 80mm auto;
-      margin: 0 !important;
+      size: 80mm auto !important;
+      margin: 0mm !important;
     }
 
     html, body {
       margin: 0 !important;
       padding: 0 !important;
-      background: #ffffff !important;
+      width: 100% !important;
       height: auto !important;
+      min-height: 0 !important;
+      background: #ffffff !important;
+      overflow: visible !important;
     }
 
-    /* 2. Hide everything outside the receipt */
-    body {
-      visibility: hidden !important;
+    /* 2. Hide everything on screen except print root */
+    body > * {
+      display: none !important;
     }
 
-    /* 3. Render receipt contents continuously without forced heights */
-    #print-root, #print-root * {
-      visibility: visible !important;
-    }
-
+    /* 3. Explicitly force #print-root to render */
     #print-root {
+      display: block !important;
+      visibility: visible !important;
       position: absolute !important;
       left: 0 !important;
       top: 0 !important;
-      width: 80mm !important;
+      width: 100% !important;
+      height: auto !important;
       margin: 0 !important;
       padding: 0 !important;
       background: #ffffff !important;
       box-shadow: none !important;
     }
 
+    #print-root * {
+      display: revert !important;
+      visibility: visible !important;
+    }
+
+    /* 4. Fit receipt content tightly */
     #printable-receipt {
+      display: block !important;
       width: 100% !important;
-      padding: 2mm 3mm !important; /* Reduced top/bottom padding */
+      max-width: 80mm !important;
+      height: auto !important;
+      padding: 2mm !important;
       margin: 0 !important;
       color: #000000 !important;
+      box-sizing: border-box !important;
     }
 
     #printable-receipt table {
       width: 100% !important;
       border-collapse: collapse !important;
     }
-    
+
     #printable-receipt .flex {
       display: flex !important;
     }
