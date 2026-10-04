@@ -14,7 +14,6 @@ export default function ReceiptModal({ sale, onClose }) {
       {/* Thermal Printer Print Styles Fix */}
      <style>{`
   @media print {
-    /* 1. Reset printer page defaults */
     @page {
       size: 80mm auto !important;
       margin: 0mm !important;
@@ -23,19 +22,16 @@ export default function ReceiptModal({ sale, onClose }) {
     html, body {
       margin: 0 !important;
       padding: 0 !important;
-      width: 100% !important;
-      height: auto !important;
-      min-height: 0 !important;
       background: #ffffff !important;
-      overflow: visible !important;
+      color: #000000 !important;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
     }
 
-    /* 2. Hide everything on screen except print root */
     body > * {
       display: none !important;
     }
 
-    /* 3. Explicitly force #print-root to render */
     #print-root {
       display: block !important;
       visibility: visible !important;
@@ -43,33 +39,40 @@ export default function ReceiptModal({ sale, onClose }) {
       left: 0 !important;
       top: 0 !important;
       width: 100% !important;
-      height: auto !important;
       margin: 0 !important;
       padding: 0 !important;
       background: #ffffff !important;
-      box-shadow: none !important;
     }
 
     #print-root * {
       display: revert !important;
       visibility: visible !important;
+      color: #000000 !important; /* Force true black for thermal heating */
+      font-weight: 700 !important; /* Make fonts bold & sharp */
+      opacity: 1 !important;
     }
 
-    /* 4. Fit receipt content tightly */
     #printable-receipt {
       display: block !important;
       width: 100% !important;
       max-width: 80mm !important;
-      height: auto !important;
       padding: 2mm !important;
       margin: 0 !important;
+      font-family: 'Courier New', Courier, monospace !important;
+      font-size: 12px !important;
+      line-height: 1.3 !important;
       color: #000000 !important;
-      box-sizing: border-box !important;
     }
 
     #printable-receipt table {
       width: 100% !important;
       border-collapse: collapse !important;
+    }
+
+    #printable-receipt th, 
+    #printable-receipt td {
+      color: #000000 !important;
+      font-weight: 700 !important;
     }
 
     #printable-receipt .flex {
