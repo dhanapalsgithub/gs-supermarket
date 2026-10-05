@@ -19,7 +19,7 @@ export const fetchCategories = () => api.get("/categories").then((r) => r.data);
 export const fetchByBarcode = (bc) => api.get(`/products/barcode/${encodeURIComponent(bc)}`).then((r) => r.data);
 export const createProduct = (p) => api.post("/products", p).then((r) => r.data);
 export const updateProduct = (id, p) => api.put(`/products/${id}`, p).then((r) => r.data);
-export const deleteProduct = (id) => api.delete(`/products/${id}`, p).then((r) => r.data);
+export const deleteProduct = (id) => api.delete(`/products/${id}`).then((r) => r.data);
 export const importProductsCsv = (file) => {
   const fd = new FormData();
   fd.append("file", file);
@@ -30,26 +30,7 @@ export const importProductsCsv = (file) => {
 export const createOrder = (payload) => api.post("/orders", payload).then((r) => r.data);
 export const fetchOrders = (params = {}) => api.get("/orders", { params }).then((r) => r.data);
 export const fetchOrder = (id) => api.get(`/orders/${id}`).then((r) => r.data);
-
-// Fully Compatible updateOrderStatus Function
-export const updateOrderStatus = async (id, payload) => {
-  try {
-    // Attempt 1: Standard PATCH endpoint /orders/:id/status
-    const res = await api.patch(`/orders/${id}/status`, payload);
-    return res.data;
-  } catch (err) {
-    console.warn("PATCH /orders/:id/status failed, attempting fallback to PUT /orders/:id", err);
-    try {
-      // Fallback 1: PUT endpoint /orders/:id
-      const res = await api.put(`/orders/${id}`, payload);
-      return res.data;
-    } catch (err2) {
-      // Fallback 2: PATCH endpoint /orders/:id
-      const res = await api.patch(`/orders/${id}`, payload);
-      return res.data;
-    }
-  }
-};
+export const updateOrderStatus = (id, payload) => api.put(`/orders/${id}`, payload).then((r) => r.data);
 
 // Customers
 export const fetchCustomers = () => api.get("/customers").then((r) => r.data);

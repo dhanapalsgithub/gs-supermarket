@@ -476,27 +476,27 @@ async def create_order(payload: OrderCreate, request: Request):
         
     return {k: v for k, v in doc.items() if k != "_id"}
 
+@api.get("/orders")
+async def list_orders(request: Request, limit: int = 200):
+    return await db.orders.find({}, {"_id": 0}).sort("created_at", -1).to_list(limit)
+
 @api.put("/orders/{oid}")
-@api.patch("/orders/{oid}/status")
-@api.put("/orders/{oid}/status")
 async def update_order_status(oid: str, payload: OrderStatusUpdate, _: dict = Depends(get_current_user)):
     updates = {k: v for k, v in payload.model_dump().items() if v is not None}
     if not updates:
         raise HTTPException(status_code=400, detail="No fields provided to update")
 
-    # ID அல்லது receipt_no இரண்டிலும் தேடுதல்
-    order = await db.orders.find_one({"$or": [{"id": oid}, {"receipt_no": oid}]})
+    order = await db.orders.find_one({"id": oid})
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
 
-    real_id = order["id"]
     new_order_status = updates.get("order_status", order.get("order_status"))
     new_pay_status = updates.get("payment_status", order.get("payment_status"))
 
     status_entry = {"at": now_iso(), "order_status": new_order_status, "payment_status": new_pay_status}
 
     result = await db.orders.update_one(
-        {"id": real_id},
+        {"id": oid},
         {
             "$set": updates,
             "$push": {"status_history": status_entry}
@@ -504,9 +504,9 @@ async def update_order_status(oid: str, payload: OrderStatusUpdate, _: dict = De
     )
 
     if result.matched_count == 0:
-        raise HTTPException(status_code=404, detail="Order update failed")
+        raise HTTPException(status_code=404, detail="Order not found")
 
-    return await db.orders.find_one({"id": real_id}, {"_id": 0})
+    return await db.orders.find_one({"id": oid}, {"_id": 0})
 
 @api.get("/settings")
 async def read_settings():

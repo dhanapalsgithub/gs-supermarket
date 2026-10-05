@@ -8,19 +8,18 @@ import {
 import ReceiptModal from "../components/ReceiptModal";
 
 const STAGES = ["PENDING", "CONFIRMED", "SHIPPED", "DELIVERED"];
-const PAGE_SIZE = 6;
+const PAGE_SIZE = 6; // ஒரு பக்கத்திற்கு 6 ஆர்டர்கள்
 
 export default function AdminOrders() {
   const [orders, setOrders] = useState([]);
   const [filter, setFilter] = useState("ALL");
-  const [sourceFilter, setSourceFilter] = useState("ALL");
+  const [sourceFilter, setSourceFilter] = useState("ALL"); // ALL, WALK-IN, ONLINE
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [selectedReceipt, setSelectedReceipt] = useState(null);
-  const [updatingId, setUpdatingId] = useState(null);
+  const [selectedReceipt, setSelectedReceipt] = useState(null); // Popup View-விற்காக
 
   const load = useCallback(async (isSilent = false) => {
     if (!isSilent) setLoading(true);
@@ -40,42 +39,27 @@ export default function AdminOrders() {
 
   useEffect(() => { load(); }, [load]);
 
-  const setStatus = async (o, newStatus) => {
-    const targetId = o.id || o._id;
-    setUpdatingId(targetId);
+  const setStatus = async (o, order_status) => {
     try { 
-      // Backend status, order_status இரண்டில் எதை எதிர்பார்த்தாலும் வேலை செய்யும் வகையில்
-      await updateOrderStatus(targetId, { 
-        status: newStatus, 
-        order_status: newStatus 
-      }); 
-      toast.success(`Marked as ${newStatus}`); 
-      await load(true); 
-    } catch (err) { 
-      console.error("Order status update failed:", err);
+      await updateOrderStatus(o.id, { order_status }); 
+      toast.success(`Marked ${order_status}`); 
+      load(true); 
+    } catch { 
       toast.error("Failed to update status"); 
-    } finally {
-      setUpdatingId(null);
     }
   };
 
   const setPay = async (o, payment_status) => {
-    const targetId = o.id || o._id;
-    setUpdatingId(targetId);
     try { 
-      await updateOrderStatus(targetId, { 
-        payment_status: payment_status 
-      }); 
+      await updateOrderStatus(o.id, { payment_status }); 
       toast.success(`Payment marked as ${payment_status}`); 
-      await load(true); 
-    } catch (err) { 
-      console.error("Payment status update failed:", err);
+      load(true); 
+    } catch { 
       toast.error("Failed to update payment status"); 
-    } finally {
-      setUpdatingId(null);
     }
   };
 
+  // Helper to check if an order is Walk-in vs Online
   const getOrderSource = (o) => {
     const type = (o.order_type || o.channel || "").toUpperCase();
     if (type.includes("POS") || type.includes("WALK") || type.includes("STORE")) {
@@ -84,11 +68,13 @@ export default function AdminOrders() {
     return "ONLINE";
   };
 
+  // Status, Source & Date Range Filtering
   const filtered = useMemo(() => {
     return orders.filter((o) => {
-      const matchStatus = filter === "ALL" || o.order_status === filter || o.status === filter;
+      const matchStatus = filter === "ALL" || o.order_status === filter;
       if (!matchStatus) return false;
 
+      // Source Filter (Walk-in vs Online)
       if (sourceFilter !== "ALL") {
         const source = getOrderSource(o);
         if (source !== sourceFilter) return false;
@@ -105,12 +91,14 @@ export default function AdminOrders() {
 
   useEffect(() => { setPage(1); }, [filter, sourceFilter, startDate, endDate]);
 
+  // Pagination Logic (6 items per page)
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE) || 1;
   const paginatedOrders = useMemo(() => {
     const start = (page - 1) * PAGE_SIZE;
     return filtered.slice(start, start + PAGE_SIZE);
   }, [filtered, page]);
 
+  // Export to CSV Function
   const exportToCSV = () => {
     if (filtered.length === 0) return toast.error("No orders to export");
     
@@ -121,7 +109,7 @@ export default function AdminOrders() {
       `"${new Date(o.created_at).toLocaleString()}"`,
       `"${o.customer_name || 'Walk-in'}"`,
       o.customer_phone || '',
-      o.order_status || o.status,
+      o.order_status,
       o.payment_status,
       o.payment_method,
       o.total
@@ -138,9 +126,10 @@ export default function AdminOrders() {
     toast.success("Orders exported successfully");
   };
 
+  // Share to WhatsApp Function
   const shareToWhatsApp = (o) => {
     const phone = o.customer_phone ? o.customer_phone.replace(/\D/g, '') : '';
-    const message = `Hello ${o.customer_name || 'Customer'}, here are the details for your order *${o.receipt_no}*:\nTotal Amount: *${money(o.total)}*\nStatus: *${o.order_status || o.status}*\nThank you for shopping with us!`;
+    const message = `Hello ${o.customer_name || 'Customer'}, here are the details for your order *${o.receipt_no}*:\nTotal Amount: *${money(o.total)}*\nStatus: *${o.order_status}*\nThank you for shopping with us!`;
     const url = `https://api.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(message)}`;
     window.open(url, '_blank');
   };
@@ -155,6 +144,7 @@ export default function AdminOrders() {
 
   return (
     <div className="h-full flex flex-col p-4 md:p-6 overflow-y-auto">
+      {/* Header section */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
         <div>
           <div className="label-cap">Management</div>
@@ -177,6 +167,7 @@ export default function AdminOrders() {
         </div>
       </div>
 
+      {/* Bill Type Selector (All / Walk-in / Online) */}
       <div className="grid grid-cols-3 gap-2 mb-4">
         {[
           { id: "ALL", label: "All Bills", icon: Package, count: orders.length },
@@ -205,6 +196,7 @@ export default function AdminOrders() {
         })}
       </div>
 
+      {/* Date & Status Filter Bar */}
       <div className="glass p-4 mb-4 flex flex-wrap items-center gap-4">
         <div className="flex items-center gap-2">
           <Calendar className="w-4 h-4 text-indigo-500" />
@@ -238,6 +230,7 @@ export default function AdminOrders() {
         )}
       </div>
 
+      {/* Status Filter Chips */}
       <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
         {["ALL", ...STAGES, "CANCELLED"].map((s) => (
           <button 
@@ -250,19 +243,18 @@ export default function AdminOrders() {
         ))}
       </div>
 
+      {/* Orders Table / List Container */}
       <div className="space-y-3 flex-1">
         {paginatedOrders.map((o) => {
-          const currentStatus = o.order_status || o.status || "PENDING";
-          const idx = STAGES.indexOf(currentStatus);
+          const idx = STAGES.indexOf(o.order_status);
           const next = STAGES[idx + 1];
           const source = getOrderSource(o);
-          const targetId = o.id || o._id;
-          const isUpdating = updatingId === targetId;
           
           return (
-            <div key={targetId} className="glass p-4 relative">
+            <div key={o.id} className="glass p-4">
               <div className="flex flex-wrap items-center gap-3 mb-3 pb-3 border-b border-white/50">
                 <div className="flex items-center gap-2">
+                  {/* Source Badge */}
                   <span className={`px-2 py-1 rounded-lg text-[10px] font-extrabold flex items-center gap-1 ${
                     source === "WALK-IN" ? "bg-cyan-50 text-cyan-700 border border-cyan-200" : "bg-indigo-50 text-indigo-700 border border-indigo-200"
                   }`}>
@@ -276,12 +268,12 @@ export default function AdminOrders() {
                 </div>
 
                 <div className="ml-auto flex items-center gap-2 flex-wrap justify-end">
-                  <span className={`px-3 py-1 rounded-full text-xs font-bold ${pillFor(currentStatus)}`}>{currentStatus}</span>
+                  <span className={`px-3 py-1 rounded-full text-xs font-bold ${pillFor(o.order_status)}`}>{o.order_status}</span>
                   
+                  {/* Payment Status Change Dropdown */}
                   <div className="relative group">
                     <select
-                      disabled={isUpdating}
-                      value={o.payment_status || "UNPAID"}
+                      value={o.payment_status}
                       onChange={(e) => setPay(o, e.target.value)}
                       className={`px-3 py-1 rounded-full text-xs font-bold border outline-none cursor-pointer appearance-none pr-7 ${
                         o.payment_status === "PAID" 
@@ -313,34 +305,30 @@ export default function AdminOrders() {
                 </div>
                 
                 <div className="rounded-xl bg-white/50 border border-white/60 p-3">
-                  <div className="text-[10px] uppercase font-bold text-slate-400">Items Summary · {o.items ? o.items.length : 0} items</div>
+                  <div className="text-[10px] uppercase font-bold text-slate-400">Items Summary · {o.items.length} items</div>
                   <div className="mt-1 space-y-0.5 text-xs text-slate-700">
-                    {o.items && o.items.slice(0, 2).map((it, i) => (
-                      <div key={i} className="flex justify-between truncate">
-                        <span className="truncate">{it.name} ×{it.quantity}</span>
-                        <span className="font-mono-num">{money(it.subtotal)}</span>
-                      </div>
+                    {o.items.slice(0, 2).map((it, i) => (
+                      <div key={i} className="flex justify-between truncate"><span className="truncate">{it.name} ×{it.quantity}</span><span className="font-mono-num">{money(it.subtotal)}</span></div>
                     ))}
-                    {o.items && o.items.length > 2 && <div className="text-slate-400 text-[11px]">+ {o.items.length - 2} more items</div>}
+                    {o.items.length > 2 && <div className="text-slate-400 text-[11px]">+ {o.items.length - 2} more items</div>}
                   </div>
                 </div>
 
                 <div className="flex flex-wrap gap-2 justify-end">
+                  {/* View Details Popup Button */}
                   <button onClick={() => setSelectedReceipt(o)} className="btn-ghost h-9 px-3 rounded-xl text-xs font-bold flex items-center gap-1.5 bg-white">
                     <Eye className="w-3.5 h-3.5 text-indigo-500" /> View
                   </button>
 
+                  {/* WhatsApp Share Button */}
                   <button onClick={() => shareToWhatsApp(o)} className="btn-ghost h-9 px-3 rounded-xl text-xs font-bold flex items-center gap-1.5 bg-white text-emerald-600 hover:text-emerald-700">
                     <MessageCircle className="w-3.5 h-3.5" /> WhatsApp
                   </button>
 
-                  {currentStatus !== "CANCELLED" && next && (
-                    <button 
-                      disabled={isUpdating}
-                      onClick={() => setStatus(o, next)} 
-                      className="btn-primary h-9 px-3 rounded-xl text-xs font-bold flex items-center gap-1 disabled:opacity-50"
-                    >
-                      {isUpdating ? "Updating..." : next} <ArrowRight className="w-3.5 h-3.5" />
+                  {/* Quick Next Status button */}
+                  {o.order_status !== "CANCELLED" && next && (
+                    <button onClick={() => setStatus(o, next)} className="btn-primary h-9 px-3 rounded-xl text-xs font-bold flex items-center gap-1">
+                      {next} <ArrowRight className="w-3.5 h-3.5" />
                     </button>
                   )}
                 </div>
@@ -355,6 +343,7 @@ export default function AdminOrders() {
         )}
       </div>
 
+      {/* Pagination Controls */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between pt-4 mt-4 border-t border-white/50">
           <div className="text-xs text-slate-500 font-medium">
@@ -379,6 +368,7 @@ export default function AdminOrders() {
         </div>
       )}
 
+      {/* Popup View Modal */}
       {selectedReceipt && (
         <ReceiptModal sale={selectedReceipt} onClose={() => setSelectedReceipt(null)} />
       )}
