@@ -1,6 +1,18 @@
-const { ConsoleLog, Config, TwaManifest, TwaBuilder } = require('@bubblewrap/core');
+const { ConsoleLog, Config, TwaManifest } = require('@bubblewrap/core');
 const path = require('path');
 const fs = require('fs');
+
+// Dynamically locate TwaBuilder across possible module paths
+let TwaBuilder;
+try {
+  TwaBuilder = require('@bubblewrap/core').TwaBuilder;
+} catch (e) {}
+
+if (!TwaBuilder) {
+  try {
+    TwaBuilder = require('@bubblewrap/core/lib/TwaBuilder').TwaBuilder || require('@bubblewrap/core/lib/TwaBuilder');
+  } catch (e) {}
+}
 
 async function run() {
   const processLog = new ConsoleLog();
@@ -29,6 +41,10 @@ async function run() {
 
   console.log('Building Android Package using TwaBuilder (AAB/APK)...');
   
+  if (!TwaBuilder) {
+    throw new Error('Could not resolve TwaBuilder class from @bubblewrap/core');
+  }
+
   // Instantiate TwaBuilder and trigger build
   const builder = new TwaBuilder(
     config,
