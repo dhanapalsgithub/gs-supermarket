@@ -18,6 +18,13 @@ export default function Customers() {
   const [editingCustomer, setEditingCustomer] = useState(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
+  // States for Credit Payment Modal
+  const [payCustomer, setPayCustomer] = useState(null);
+  const [isPayModalOpen, setIsPayModalOpen] = useState(false);
+  const [paymentAmount, setPaymentAmount] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('CASH');
+  const [isSubmittingPay, setIsSubmittingPay] = useState(false);
+
   useEffect(() => {
     fetchCustomersAndOrders();
   }, []);
@@ -191,6 +198,43 @@ export default function Customers() {
     } catch (err) {
       console.error('Error updating customer', err);
       alert('Failed to update customer.');
+    }
+  };
+
+  /* Open Pay Credit Modal */
+  const handlePayClick = (cust) => {
+    setPayCustomer(cust);
+    setPaymentAmount(cust.totalCredit ? cust.totalCredit.toString() : '');
+    setIsPayModalOpen(true);
+  };
+
+  /* Submit Payment API Update */
+  const handlePaymentSubmit = async (e) => {
+    e.preventDefault();
+    if (!paymentAmount || Number(paymentAmount) <= 0) {
+      alert('Please enter a valid amount');
+      return;
+    }
+
+    try {
+      setIsSubmittingPay(true);
+      const customerId = payCustomer.id || payCustomer.phone;
+      
+      // Update customer credit/payment API
+      await api.post(`/customers/${customerId}/pay-credit`, {
+        amount: Number(paymentAmount),
+        payment_method: paymentMethod,
+        phone: payCustomer.phone
+      });
+
+      alert('Payment updated successfully!');
+      setIsPayModalOpen(false);
+      fetchCustomersAndOrders(); // Refresh table data
+    } catch (err) {
+      console.error('Error processing credit payment', err);
+      alert('Failed to process payment. Please check API integration.');
+    } finally {
+      setIsSubmittingPay(false);
     }
   };
 
@@ -393,7 +437,13 @@ export default function Customers() {
                           </span>
                         )}
                       </td>
-                      <td className="p-3">
+                      <td className="p-3 flex items-center gap-3">
+                        <button
+                          onClick={() => handlePayClick(cust)}
+                          className="bg-emerald-600 text-white px-2.5 py-1 rounded hover:bg-emerald-700 text-xs font-bold shadow-sm"
+                        >
+                          Pay
+                        </button>
                         <button
                           onClick={() => handleEditClick(cust)}
                           className="text-blue-600 hover:underline text-sm font-semibold"
@@ -469,6 +519,7 @@ export default function Customers() {
         </div>
       )}
 
+      {/* Edit Customer Modal */}
       {isEditModalOpen && editingCustomer && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-lg">
@@ -523,6 +574,76 @@ export default function Customers() {
                   className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm font-semibold"
                 >
                   Update
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Pay Credit Modal */}
+      {isPayModalOpen && payCustomer && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-lg">
+            <h2 className="text-xl font-bold mb-2">Record Credit Payment</h2>
+            <p className="text-sm text-gray-600 mb-4">
+              Customer: <span className="font-semibold text-gray-800">{payCustomer.name}</span> ({payCustomer.phone})
+            </p>
+            <form onSubmit={handlePaymentSubmit}>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Outstanding Balance
+                </label>
+                <div className="p-2.5 bg-amber-50 border border-amber-200 rounded-lg text-amber-900 font-extrabold text-lg">
+                  {money(payCustomer.totalCredit)}
+                </div>
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Payment Amount Received
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  max={payCustomer.totalCredit}
+                  value={paymentAmount}
+                  onChange={(e) => setPaymentAmount(e.target.value)}
+                  className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none font-bold text-lg"
+                  required
+                />
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Payment Method
+                </label>
+                <select
+                  value={paymentMethod}
+                  onChange={(e) => setPaymentMethod(e.target.value)}
+                  className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-sm"
+                >
+                  <option value="CASH">Cash</option>
+                  <option value="UPI">UPI / GPay / PhonePe</option>
+                  <option value="CARD">Card</option>
+                  <option value="BANK_TRANSFER">Bank Transfer</option>
+                </select>
+              </div>
+
+              <div className="flex justify-end gap-3 mt-6">
+                <button
+                  type="button"
+                  onClick={() => setIsPayModalOpen(false)}
+                  className="px-4 py-2 border rounded-lg text-gray-600 hover:bg-gray-100 text-sm font-semibold"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingPay}
+                  className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-sm font-semibold disabled:opacity-50"
+                >
+                  {isSubmittingPay ? 'Processing...' : 'Record Payment'}
                 </button>
               </div>
             </form>

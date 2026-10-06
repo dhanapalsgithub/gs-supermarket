@@ -35,6 +35,7 @@ export const updateOrderStatus = (id, payload) => api.put(`/orders/${id}`, paylo
 // Customers
 export const fetchCustomers = () => api.get("/customers").then((r) => r.data);
 export const createCustomer = (payload) => api.post("/customers", payload).then((r) => r.data);
+export const payCustomerCredit = (id, payload) => api.post(`/customers/${id}/pay-credit`, payload).then((r) => r.data);
 
 // Suppliers
 export const fetchSuppliers = () => api.get("/suppliers").then((r) => r.data);
@@ -55,8 +56,7 @@ export const updateProfile = (payload) => api.put("/auth/profile", payload).then
 export const fetchStats = () => api.get("/stats/summary").then((r) => r.data);
 export const fetchReport = () => api.get("/stats/report").then((r) => r.data);
 
-// --- Add to api.js ---
-
+// --- Credit Management ---
 export const clearCustomerCredit = (phone, amount_paid = null) =>
   api.post("/customers/clear-credit", { customer_phone: phone, amount_paid }).then((r) => r.data);
 
