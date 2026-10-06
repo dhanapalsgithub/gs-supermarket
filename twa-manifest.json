@@ -1,0 +1,27 @@
+{
+  "packageId": "com.gsbilling.supermarket",
+  "host": "supermarket-tau.vercel.app",
+  "name": "GS Supermarket",
+  "launcherName": "GS Billing",
+  "display": "standalone",
+  "themeColor": "#000000",
+  "navigationColor": "#000000",
+  "backgroundColor": "#ffffff",
+  "enableNotifications": true,
+  "startUrl": "/",
+  "iconUrl": "https://supermarket-tau.vercel.app/favicon.ico",
+  "maskableIconUrl": "https://supermarket-tau.vercel.app/favicon.ico",
+  "appVersionName": "1.0.0",
+  "appVersionCode": 1,
+  "signingKey": {
+    "path": "release.keystore",
+    "alias": "release"
+  },
+  "generatorApp": "bubblewrap-cli",
+  "webManifestUrl": "https://supermarket-tau.vercel.app/manifest.json",
+  "fallbackType": "customtabs",
+  "features": {},
+  "alphaDependencies": {
+    "enabled": false
+  }
+}
