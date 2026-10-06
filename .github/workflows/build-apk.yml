@@ -29,7 +29,7 @@ jobs:
         run: |
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > release.keystore
 
-      - name: Install Bubblewrap Dependencies
+      - name: Install Dependencies
         run: |
           npm install @bubblewrap/core @bubblewrap/cli
 
@@ -46,8 +46,6 @@ jobs:
         with:
           name: App-Release-Files
           path: |
-            app-release-signed.apk
-            app-release-bundle.aab
             *.aab
             *.apk
           if-no-files-found: warn
