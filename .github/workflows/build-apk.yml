@@ -45,13 +45,21 @@ jobs:
       - name: Setup Bubblewrap Config (Bypass CLI Prompts)
         run: |
           mkdir -p ~/.bubblewrap
+
+          # Dynamic detection of Android SDK Path
+          SDK_PATH="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
+          if [ -z "$SDK_PATH" ] || [ ! -d "$SDK_PATH" ]; then
+            SDK_PATH="/usr/local/lib/android/sdk"
+          fi
+
           cat <<EOF > ~/.bubblewrap/config.json
           {
             "jdkPath": "${JAVA_HOME}",
-            "androidSdkPath": "${ANDROID_HOME}"
+            "androidSdkPath": "${SDK_PATH}"
           }
           EOF
-          echo "Bubblewrap CLI config injected successfully!"
+
+          echo "Bubblewrap CLI config injected successfully with SDK Path: ${SDK_PATH}"
 
       - name: Run Bubblewrap Core Build Script
         env:
