@@ -36,6 +36,7 @@ export const updateOrderStatus = (id, payload) => api.put(`/orders/${id}`, paylo
 export const fetchCustomers = () => api.get("/customers").then((r) => r.data);
 export const createCustomer = (payload) => api.post("/customers", payload).then((r) => r.data);
 export const payCustomerCredit = (id, payload) => api.post(`/customers/${id}/pay-credit`, payload).then((r) => r.data);
+export const fetchCustomerPaymentHistory = (id) => api.get(`/customers/${id}/payment-history`).then((r) => r.data);
 
 // Suppliers
 export const fetchSuppliers = () => api.get("/suppliers").then((r) => r.data);

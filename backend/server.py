@@ -15,6 +15,7 @@ import logging
 import bcrypt
 import jwt
 import uuid
+import re
 import asyncio
 from pydantic import BaseModel, Field, EmailStr
 from typing import List, Optional, Literal
@@ -92,6 +93,8 @@ async def lifespan(app: FastAPI):
         await db.users.create_index("email", unique=True)
         await db.products.create_index("barcode")
         await db.orders.create_index("created_at")
+        await db.credit_payments.create_index("customer_id")
+        await db.credit_payments.create_index("phone")
 
         owner_email = os.environ.get("ADMIN_EMAIL", "smallbiz743@gmail.com").lower()
         owner_password = os.environ.get("ADMIN_PASSWORD", "Admin@123")
@@ -343,26 +346,60 @@ async def create_customer(payload: CustomerCreate, _: dict = Depends(get_current
     return {k: v for k, v in doc.items() if k != "_id"}
 
 @api.post("/customers/{identifier}/pay-credit")
-async def pay_customer_credit(identifier: str, payload: PayCreditPayload, _: dict = Depends(get_current_user)):
-    # 1. Locate customer by ID or Phone
-    phone = (payload.phone or identifier).strip()
+async def pay_customer_credit(identifier: str, payload: PayCreditPayload, user: dict = Depends(get_current_user)):
+    clean_identifier = str(identifier).strip()
+    phone_clean = str(payload.phone or identifier).strip()
+    amt_paid = float(payload.amount)
+
+    # 1. Flexible customer lookup by ID, phone, or name
     cust = await db.customers.find_one({
-        "$or": [{"id": identifier}, {"phone": phone}, {"mobile": phone}]
+        "$or": [
+            {"id": clean_identifier},
+            {"phone": clean_identifier},
+            {"phone": phone_clean},
+            {"mobile": phone_clean},
+            {"phone": {"$regex": f"^{re.escape(phone_clean)}$", "$options": "i"}},
+            {"id": {"$regex": f"^{re.escape(clean_identifier)}$", "$options": "i"}}
+        ]
     })
 
-    amt_paid = float(payload.amount)
-    
+    target_phone = phone_clean
+    customer_id = clean_identifier
+    cust_name = "Customer"
+
     if cust:
+        customer_id = str(cust.get("id", clean_identifier))
+        target_phone = str(cust.get("phone", cust.get("mobile", phone_clean))).strip()
+        cust_name = cust.get("name", "Customer")
+
+        # Deduct from customer database record
         current_bal = float(cust.get("credit_balance", 0.0))
         new_bal = max(0.0, current_bal - amt_paid)
         await db.customers.update_one(
-            {"id": cust["id"]},
+            {"_id": cust["_id"]},
             {"$set": {"credit_balance": new_bal, "updated_at": now_iso()}}
         )
 
-    # 2. Update outstanding credit orders chronologically
+    # 2. Record Transaction Entry in credit_payments collection
+    payment_doc = {
+        "id": str(uuid.uuid4()),
+        "customer_id": customer_id,
+        "customer_name": cust_name,
+        "phone": target_phone,
+        "amount": amt_paid,
+        "payment_method": payload.payment_method or "CASH",
+        "recorded_by": user.get("name", "Cashier"),
+        "created_at": now_iso()
+    }
+    await db.credit_payments.insert_one(payment_doc)
+
+    # 3. Update outstanding credit orders chronologically
     orders = await db.orders.find({
-        "$or": [{"customer_phone": phone}, {"phone": phone}]
+        "$or": [
+            {"customer_phone": target_phone},
+            {"phone": target_phone},
+            {"customer_id": customer_id}
+        ]
     }).sort("created_at", 1).to_list(1000)
 
     remaining_payment = amt_paid
@@ -371,7 +408,7 @@ async def pay_customer_credit(identifier: str, payload: PayCreditPayload, _: dic
             break
             
         pm = str(ord_doc.get("payment_method", "")).upper()
-        is_credit = "CREDIT" in pm or "NON PAY" in pm or "NON-PAY" in pm
+        is_credit = "CREDIT" in pm or "NON PAY" in pm or "NON-PAY" in pm or ord_doc.get("payment_status") != "PAID"
         
         tot = float(ord_doc.get("total", 0))
         current_order_paid = float(ord_doc.get("amount_paid", 0))
@@ -394,7 +431,36 @@ async def pay_customer_credit(identifier: str, payload: PayCreditPayload, _: dic
                 }
             )
 
-    return {"message": "Payment recorded successfully", "amount_paid": amt_paid}
+    return {
+        "success": True,
+        "message": "Payment recorded successfully",
+        "amount_paid": amt_paid,
+        "payment_id": payment_doc["id"]
+    }
+
+@api.get("/customers/{identifier}/payment-history")
+async def get_customer_payment_history(identifier: str, _: dict = Depends(get_current_user)):
+    clean_id = str(identifier).strip()
+    cust = await db.customers.find_one({
+        "$or": [
+            {"id": clean_id},
+            {"phone": clean_id},
+            {"mobile": clean_id}
+        ]
+    })
+    
+    phone = str(cust.get("phone", clean_id)).strip() if cust else clean_id
+    cust_id = str(cust.get("id", clean_id)) if cust else clean_id
+
+    history = await db.credit_payments.find({
+        "$or": [
+            {"customer_id": cust_id},
+            {"phone": phone},
+            {"phone": clean_id}
+        ]
+    }, {"_id": 0}).sort("created_at", -1).to_list(500)
+    
+    return history
 
 @api.post("/customers/clear-credit")
 async def clear_customer_credit(payload: ClearCreditPayload, _: dict = Depends(get_current_user)):

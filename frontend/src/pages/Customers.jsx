@@ -25,6 +25,12 @@ export default function Customers() {
   const [paymentMethod, setPaymentMethod] = useState('CASH');
   const [isSubmittingPay, setIsSubmittingPay] = useState(false);
 
+  // States for Payment History Modal
+  const [historyCustomer, setHistoryCustomer] = useState(null);
+  const [paymentHistory, setPaymentHistory] = useState([]);
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+
   useEffect(() => {
     fetchCustomersAndOrders();
   }, []);
@@ -229,12 +235,29 @@ export default function Customers() {
 
       alert('Payment updated successfully!');
       setIsPayModalOpen(false);
-      fetchCustomersAndOrders(); // Refresh table data
+      fetchCustomersAndOrders(); // Refresh table data and balance
     } catch (err) {
       console.error('Error processing credit payment', err);
       alert('Failed to process payment. Please check API integration.');
     } finally {
       setIsSubmittingPay(false);
+    }
+  };
+
+  /* View Customer Paid History */
+  const handleViewHistory = async (cust) => {
+    try {
+      setHistoryCustomer(cust);
+      setLoadingHistory(true);
+      setIsHistoryModalOpen(true);
+      const identifier = cust.id || cust.phone;
+      const res = await api.get(`/customers/${identifier}/payment-history`);
+      setPaymentHistory(Array.isArray(res.data) ? res.data : []);
+    } catch (err) {
+      console.error('Error fetching payment history', err);
+      setPaymentHistory([]);
+    } flex {
+      setLoadingHistory(false);
     }
   };
 
@@ -437,7 +460,7 @@ export default function Customers() {
                           </span>
                         )}
                       </td>
-                      <td className="p-3 flex items-center gap-3">
+                      <td className="p-3 flex items-center gap-2">
                         <button
                           onClick={() => handlePayClick(cust)}
                           className="bg-emerald-600 text-white px-2.5 py-1 rounded hover:bg-emerald-700 text-xs font-bold shadow-sm"
@@ -445,8 +468,14 @@ export default function Customers() {
                           Pay
                         </button>
                         <button
+                          onClick={() => handleViewHistory(cust)}
+                          className="bg-indigo-50 text-indigo-700 border border-indigo-200 px-2.5 py-1 rounded hover:bg-indigo-100 text-xs font-bold"
+                        >
+                          Paid History
+                        </button>
+                        <button
                           onClick={() => handleEditClick(cust)}
-                          className="text-blue-600 hover:underline text-sm font-semibold"
+                          className="text-blue-600 hover:underline text-sm font-semibold ml-1"
                         >
                           Edit
                         </button>
@@ -647,6 +676,74 @@ export default function Customers() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Payment History Modal */}
+      {isHistoryModalOpen && historyCustomer && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-lg shadow-lg">
+            <div className="flex justify-between items-center mb-4 border-b pb-3">
+              <div>
+                <h2 className="text-xl font-bold">Paid History</h2>
+                <p className="text-xs text-gray-500">
+                  Customer: <span className="font-semibold text-gray-800">{historyCustomer.name}</span> ({historyCustomer.phone})
+                </p>
+              </div>
+              <button
+                onClick={() => setIsHistoryModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600 text-lg font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="max-h-80 overflow-y-auto">
+              {loadingHistory ? (
+                <div className="p-6 text-center text-gray-500">Loading payment history...</div>
+              ) : paymentHistory.length > 0 ? (
+                <table className="w-full text-left border-collapse text-sm">
+                  <thead>
+                    <tr className="bg-gray-50 border-b">
+                      <th className="p-2.5">Date</th>
+                      <th className="p-2.5">Method</th>
+                      <th className="p-2.5 text-right">Amount Paid</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {paymentHistory.map((pmt, idx) => (
+                      <tr key={pmt.id || idx} className="border-b hover:bg-gray-50">
+                        <td className="p-2.5 text-gray-600">
+                          {pmt.created_at ? new Date(pmt.created_at).toLocaleString() : 'N/A'}
+                        </td>
+                        <td className="p-2.5">
+                          <span className="px-2 py-0.5 bg-gray-100 border text-gray-800 text-xs rounded font-semibold">
+                            {pmt.payment_method || 'CASH'}
+                          </span>
+                        </td>
+                        <td className="p-2.5 text-right font-bold text-emerald-600">
+                          {money(pmt.amount)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <div className="p-6 text-center text-gray-500 border rounded-lg bg-gray-50">
+                  No payment history records found for this customer.
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end mt-6">
+              <button
+                onClick={() => setIsHistoryModalOpen(false)}
+                className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 text-sm font-semibold"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}
