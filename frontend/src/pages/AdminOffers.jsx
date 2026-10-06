@@ -53,14 +53,16 @@ export default function AdminOffers() {
   };
 
   // ஆஃபரை நீக்க (Delete)
-  const handleDelete = async (id) => {
+ const handleDelete = async (id) => {
     if (!confirm("இந்த ஆஃபரை நீக்க விரும்புகிறீர்களா?")) return;
     try {
       await deleteOffer(id);
       toast.success("ஆஃபர் நீக்கப்பட்டது");
       loadOffers();
     } catch (err) {
-      toast.error("நீக்குவதில் தோல்வி ஏற்பட்டது");
+      console.error("Delete error:", err);
+      const errorMsg = err.response?.data?.detail || "நீக்குவதில் தோல்வி ஏற்பட்டது";
+      toast.error(errorMsg);
     }
   };
 
