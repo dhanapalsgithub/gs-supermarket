@@ -32,17 +32,20 @@ jobs:
       - name: Install Bubblewrap CLI
         run: npm install -g @bubblewrap/cli
 
-      - name: Setup Bubblewrap Path Config
+      - name: Configure Bubblewrap Environment
         run: |
           npx bubblewrap updateConfig --jdkPath="$JAVA_HOME" --androidSdkPath="$ANDROID_HOME"
 
-      - name: Build TWA Android Package
+      - name: Generate Android Project Files
+        run: |
+          yes | npx bubblewrap update --manifest=./ || true
+
+      - name: Build Signed Android Package
         env:
           BUBBLEWRAP_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
           BUBBLEWRAP_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
         run: |
           npx bubblewrap build \
-            --manifest=./ \
             --skipPwaValidation \
             --signingKeyPath=release.keystore \
             --signingKeyAlias="${{ secrets.RELEASE_KEY_ALIAS }}"
