@@ -644,17 +644,21 @@ async def create_order(payload: OrderCreate, request: Request):
 @api.get("/orders")
 async def list_orders(request: Request, limit: int = 200):
     return await db.orders.find({}, {"_id": 0}).sort("created_at", -1).to_list(limit)
+
 # --- Offer Update & Delete Endpoints ---
-@api.put("/offers/{oid}")
+@api.put("/admin/offers/{oid}")
 async def update_offer(oid: str, payload: OfferBroadcastInput, _: dict = Depends(get_current_user)):
-    r = await db.offers.update_one({"id": oid}, {"$set": {"message": payload.message, "updated_at": now_iso()}})
+    r = await db.offers.update_one(
+        {"$or": [{"id": oid}, {"_id": oid}]},
+        {"$set": {"message": payload.message, "updated_at": now_iso()}}
+    )
     if r.matched_count == 0:
         raise HTTPException(status_code=404, detail="Offer not found")
-    return await db.offers.find_one({"id": oid}, {"_id": 0})
+    return await db.offers.find_one({"$or": [{"id": oid}, {"_id": oid}]}, {"_id": 0})
 
-@api.delete("/offers/{oid}")
+@api.delete("/admin/offers/{oid}")
 async def delete_offer(oid: str, _: dict = Depends(get_current_user)):
-    r = await db.offers.delete_one({"id": oid})
+    r = await db.offers.delete_one({"$or": [{"id": oid}, {"_id": oid}]})
     if r.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Offer not found")
     return {"deleted": r.deleted_count}
@@ -665,14 +669,17 @@ async def update_purchase(pid: str, payload: PurchaseCreate, _: dict = Depends(g
     updates = payload.model_dump()
     updates["closing_value"] = payload.rate * payload.closing_qty
     updates["updated_at"] = now_iso()
-    r = await db.purchases.update_one({"id": pid}, {"$set": updates})
+    r = await db.purchases.update_one(
+        {"$or": [{"id": pid}, {"_id": pid}]},
+        {"$set": updates}
+    )
     if r.matched_count == 0:
         raise HTTPException(status_code=404, detail="Purchase record not found")
-    return await db.purchases.find_one({"id": pid}, {"_id": 0})
+    return await db.purchases.find_one({"$or": [{"id": pid}, {"_id": pid}]}, {"_id": 0})
 
 @api.delete("/purchases/{pid}")
 async def delete_purchase(pid: str, _: dict = Depends(get_current_user)):
-    r = await db.purchases.delete_one({"id": pid})
+    r = await db.purchases.delete_one({"$or": [{"id": pid}, {"_id": pid}]})
     if r.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Purchase record not found")
     return {"deleted": r.deleted_count}
