@@ -1,14 +1,14 @@
-const { CliLog, Config, generateProject, buildProject } = require('@bubblewrap/core');
+const { CliLog, Config, generateProject, buildProject, TwaManifest } = require('@bubblewrap/core');
 const path = require('path');
-const fs = require('fs');
 
 async function run() {
   const processLog = new CliLog();
-  const manifestPath = path.join(__dirname, 'twa-manifest.json');
-  const manifestJson = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
-
-  // Keystore secrets setup
-  manifestJson.signingKey = {
+  
+  // Load twa-manifest.json from the current directory
+  const twaManifest = await TwaManifest.fromLocalFolder(__dirname);
+  
+  // Set signing key configuration directly from secrets
+  twaManifest.signingKey = {
     path: path.join(__dirname, 'release.keystore'),
     alias: process.env.RELEASE_KEY_ALIAS || 'release'
   };
@@ -19,12 +19,12 @@ async function run() {
   );
 
   console.log('Generating Android Project...');
-  await generateProject(manifestJson, __dirname, config, processLog);
+  await generateProject(twaManifest, __dirname, config, processLog);
 
   console.log('Building Android Package...');
   await buildProject(
     config,
-    manifestJson,
+    twaManifest,
     process.env.BUBBLEWRAP_KEYSTORE_PASSWORD,
     process.env.BUBBLEWRAP_KEY_PASSWORD,
     processLog
