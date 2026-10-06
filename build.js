@@ -1,14 +1,22 @@
 const { ConsoleLog, Config, generateProject, buildProject, TwaManifest } = require('@bubblewrap/core');
 const path = require('path');
+const fs = require('fs');
 
 async function run() {
-  // Use ConsoleLog instead of CliLog
   const processLog = new ConsoleLog();
   
-  // Load local manifest
-  const twaManifest = await TwaManifest.fromLocalFolder(__dirname);
+  // Load twa-manifest.json directly
+  const manifestPath = path.join(__dirname, 'twa-manifest.json');
   
-  // Configure keystore explicitly
+  let twaManifest;
+  if (typeof TwaManifest.fromFile === 'function') {
+    twaManifest = await TwaManifest.fromFile(manifestPath);
+  } else {
+    const manifestJson = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+    twaManifest = new TwaManifest(manifestJson);
+  }
+
+  // Set signing key configuration
   twaManifest.signingKey = {
     path: path.join(__dirname, 'release.keystore'),
     alias: process.env.RELEASE_KEY_ALIAS || 'release'
