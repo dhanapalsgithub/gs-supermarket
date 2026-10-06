@@ -228,7 +228,7 @@ class OrderCreate(BaseModel):
     tax_amount: float = 0.0
     discount: float = 0.0
     total: float
-    payment_method: str  # Allows CASH, UPI, CARD, COD, CREDIT, etc.
+    payment_method: str
     amount_paid: float = 0.0
     change_due: float = 0.0
     customer_name: Optional[str] = None
@@ -273,12 +273,10 @@ class SupplierCreate(BaseModel):
     company: Optional[str] = None
     address: Optional[str] = None
 
-# Root level Endpoints
 @app.get("/")
 async def root():
     return {"message": "GS Billing API", "brand": "GS", "built_by": "R I Billing Pro", "status": "active"}
 
-# API Router Endpoints
 @api.post("/auth/register")
 async def register(payload: RegisterInput):
     email = payload.email.lower().strip()
@@ -344,13 +342,13 @@ async def create_customer(payload: CustomerCreate, _: dict = Depends(get_current
     }
     await db.customers.insert_one(doc)
     return {k: v for k, v in doc.items() if k != "_id"}
+
 @api.post("/customers/{identifier}/pay-credit")
 async def pay_customer_credit(identifier: str, payload: PayCreditPayload, user: dict = Depends(get_current_user)):
     clean_identifier = str(identifier).strip()
     phone_clean = str(payload.phone or identifier).strip()
     amt_paid = float(payload.amount)
 
-    # 1. Flexible customer lookup by ID, phone, or mobile
     cust = await db.customers.find_one({
         "$or": [
             {"id": clean_identifier},
@@ -371,7 +369,6 @@ async def pay_customer_credit(identifier: str, payload: PayCreditPayload, user: 
         target_phone = str(cust.get("phone", cust.get("mobile", phone_clean))).strip()
         cust_name = cust.get("name", "Customer")
 
-        # Deduct from customer database record
         current_bal = float(cust.get("credit_balance", 0.0))
         new_bal = max(0.0, current_bal - amt_paid)
         await db.customers.update_one(
@@ -379,7 +376,6 @@ async def pay_customer_credit(identifier: str, payload: PayCreditPayload, user: 
             {"$set": {"credit_balance": new_bal, "updated_at": now_iso()}}
         )
 
-    # 2. Record Transaction Entry in credit_payments collection
     payment_doc = {
         "id": str(uuid.uuid4()),
         "customer_id": customer_id,
@@ -392,7 +388,6 @@ async def pay_customer_credit(identifier: str, payload: PayCreditPayload, user: 
     }
     await db.credit_payments.insert_one(payment_doc)
 
-    # 3. Update outstanding credit orders chronologically and clear credit balances
     orders = await db.orders.find({
         "$or": [
             {"customer_phone": target_phone},
@@ -433,6 +428,7 @@ async def pay_customer_credit(identifier: str, payload: PayCreditPayload, user: 
         "amount_paid": amt_paid,
         "payment_id": payment_doc["id"]
     }
+
 @api.get("/customers/{identifier}/payment-history")
 async def get_customer_payment_history(identifier: str, _: dict = Depends(get_current_user)):
     clean_id = str(identifier).strip()
@@ -709,12 +705,98 @@ async def add_wishlist(payload: WishlistItemIn, user: dict = Depends(get_current
 
 @api.get("/stats/summary")
 async def stats_summary():
+    # Dynamic calculations for financial stats & live inventories
+    orders = await db.orders.find({}, {"_id": 0, "total": 1, "items": 1}).to_list(50000)
+    total_revenue = sum(float(o.get("total", 0)) for o in orders)
+
+    purchases = await db.purchases.find({}, {"_id": 0, "rate": 1, "closing_qty": 1, "closing_value": 1}).to_list(50000)
+    total_purchase_cost = sum(
+        float(p.get("closing_value") if p.get("closing_value") is not None else float(p.get("rate", 0)) * float(p.get("closing_qty", 0)))
+        for p in purchases
+    )
+    total_purchase_product = sum(float(p.get("closing_qty", 0)) for p in purchases)
+
+    # Calculate gross margin / total profit
+    product_rates = {}
+    for p in purchases:
+        if p.get("product_name"):
+            product_rates[p["product_name"].lower()] = float(p.get("rate", 0))
+
+    total_cogs = 0.0
+    for o in orders:
+        for item in o.get("items", []):
+            item_name = str(item.get("name", "")).lower()
+            cost_rate = product_rates.get(item_name, float(item.get("price", 0)) * 0.7)
+            total_cogs += cost_rate * float(item.get("quantity", 1))
+
+    total_profit = max(0.0, total_revenue - total_cogs)
+
+    # Stock quantity aggregator
+    stock_pipeline = [{"$group": {"_id": None, "total_stock": {"$sum": "$stock"}}}]
+    stock_res = await db.products.aggregate(stock_pipeline).to_list(1)
+    total_inventory_product = stock_res[0]["total_stock"] if stock_res else 0
+
     return {
         "total_products": await db.products.count_documents({}),
         "total_customers": await db.customers.count_documents({}),
         "total_supplier": await db.suppliers.count_documents({}),
-        "total_online_order": await db.orders.count_documents({"channel": "ONLINE"}),
-        "pending_orders": await db.orders.count_documents({"order_status": {"$in": ["PENDING", "CONFIRMED"]}})
+        "total_online_order": await db.orders.count_documents({"$or": [{"channel": "ONLINE"}, {"channel": "online"}]}),
+        "total_purchase_product": int(total_purchase_product),
+        "total_inventory_product": int(total_inventory_product),
+        "total_revenue": total_revenue,
+        "total_purchase_cost": total_purchase_cost,
+        "total_profit": total_profit,
+        "pending_orders": await db.orders.count_documents({"order_status": "PENDING"})
+    }
+
+@api.get("/stats/report")
+async def stats_report():
+    today_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    yesterday_str = (datetime.now(timezone.utc) - timedelta(days=1)).strftime("%Y-%m-%d")
+
+    today_hours = [0.0] * 24
+    yesterday_hours = [0.0] * 24
+
+    orders = await db.orders.find({}, {"_id": 0, "created_at": 1, "total": 1, "items": 1}).to_list(50000)
+
+    top_products_map = {}
+
+    for o in orders:
+        created_at = o.get("created_at")
+        if not created_at:
+            continue
+        try:
+            dt = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
+            date_str = dt.strftime("%Y-%m-%d")
+            hour = dt.hour
+            tot = float(o.get("total", 0))
+
+            if date_str == today_str:
+                today_hours[hour] += tot
+            elif date_str == yesterday_str:
+                yesterday_hours[hour] += tot
+
+            for item in o.get("items", []):
+                pid = item.get("product_id") or item.get("name")
+                pname = item.get("name", "Unknown Product")
+                qty = float(item.get("quantity", 0))
+                subtot = float(item.get("subtotal", item.get("price", 0) * qty))
+
+                if pid not in top_products_map:
+                    top_products_map[pid] = {"product_id": pid, "name": pname, "qty": 0, "revenue": 0.0}
+                top_products_map[pid]["qty"] += int(qty)
+                top_products_map[pid]["revenue"] += subtot
+        except Exception:
+            continue
+
+    top_products = sorted(list(top_products_map.values()), key=lambda x: x["revenue"], reverse=True)[:5]
+
+    return {
+        "today": today_hours,
+        "yesterday": yesterday_hours,
+        "today_total": sum(today_hours),
+        "yesterday_total": sum(yesterday_hours),
+        "top_products": top_products
     }
 
 # Include API Router
