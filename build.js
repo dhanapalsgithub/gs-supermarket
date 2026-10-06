@@ -1,12 +1,6 @@
-const bubblewrapCore = require('@bubblewrap/core');
+const { ConsoleLog, Config, TwaManifest, TwaBuilder } = require('@bubblewrap/core');
 const path = require('path');
 const fs = require('fs');
-
-// Safely extract exports from @bubblewrap/core
-const ConsoleLog = bubblewrapCore.ConsoleLog;
-const Config = bubblewrapCore.Config;
-const TwaManifest = bubblewrapCore.TwaManifest;
-const Bubblewrap = bubblewrapCore.Bubblewrap || bubblewrapCore.default || bubblewrapCore;
 
 async function run() {
   const processLog = new ConsoleLog();
@@ -22,7 +16,7 @@ async function run() {
     twaManifest = new TwaManifest(manifestJson);
   }
 
-  // Set signing key configuration directly from environment variables
+  // Set signing key configuration directly from secrets
   twaManifest.signingKey = {
     path: path.join(__dirname, 'release.keystore'),
     alias: process.env.RELEASE_KEY_ALIAS || 'release'
@@ -33,17 +27,22 @@ async function run() {
     process.env.ANDROID_HOME
   );
 
-  console.log('Building Android Package (AAB/APK)...');
+  console.log('Building Android Package using TwaBuilder (AAB/APK)...');
   
-  // Instantiate Bubblewrap class safely
-  const bubblewrap = new Bubblewrap(config, twaManifest, processLog);
-  const success = await bubblewrap.build(
+  // Instantiate TwaBuilder and trigger build
+  const builder = new TwaBuilder(
+    config,
+    twaManifest,
+    processLog
+  );
+
+  const success = await builder.build(
     process.env.BUBBLEWRAP_KEYSTORE_PASSWORD,
     process.env.BUBBLEWRAP_KEY_PASSWORD
   );
 
   if (!success) {
-    throw new Error('Bubblewrap build failed');
+    throw new Error('Bubblewrap TwaBuilder failed to generate release packages');
   }
 
   console.log('Build completed successfully!');
