@@ -8,6 +8,7 @@ export default function Customers() {
   const [allCustomers, setAllCustomers] = useState([]);
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState(null);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [startDate, setStartDate] = useState('');
@@ -38,6 +39,8 @@ export default function Customers() {
   const fetchCustomersAndOrders = async () => {
     try {
       setLoading(true);
+      setFetchError(null);
+
       const [custRes, ordRes] = await Promise.all([
         api.get('/customers'),
         api.get('/orders').catch(() => ({ data: [] }))
@@ -51,7 +54,7 @@ export default function Customers() {
       if (Array.isArray(rawCust)) {
         fullList = rawCust;
         online = rawCust.filter((c) => c.type === 'online' || c.channel === 'ONLINE');
-        walking = rawCust.filter((c) => c.type === 'walking' || c.channel === 'WALK-IN' || c.type === 'pos');
+        walking = rawCust.filter((c) => c.type === 'walking' || c.channel === 'WALK-IN' || c.type === 'pos' || c.channel === 'POS');
       } else {
         online = rawCust.online || [];
         walking = rawCust.walking || [];
@@ -63,8 +66,11 @@ export default function Customers() {
       setAllCustomers(fullList);
       setOrders(Array.isArray(ordRes.data) ? ordRes.data : []);
     } catch (err) {
-      console.error('Error fetching data', err);
-    } 
+      console.error('Error fetching customer data:', err);
+      setFetchError('Failed to load customer records. Please verify login or network connection.');
+    } finally {
+      setLoading(false); // Fixes endless loading screen
+    }
   };
 
   /* Process Credit Customers & Outstanding Balances */
@@ -311,6 +317,18 @@ export default function Customers() {
           📥 Export CSV
         </button>
       </div>
+
+      {fetchError && (
+        <div className="mb-4 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg flex justify-between items-center">
+          <span>{fetchError}</span>
+          <button
+            onClick={fetchCustomersAndOrders}
+            className="px-3 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700"
+          >
+            Retry
+          </button>
+        </div>
+      )}
 
       {/* Credit Summary Header Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">

@@ -1,17 +1,28 @@
 import axios from "axios";
 
-// Vercel ரவுட்டிங் சிக்கலைத் தவிர்க்க நேரடியாக ரெண்டர் பேக்எண்ட் URL-ஐப் பயன்படுத்துதல்
 export const api = axios.create({
   baseURL: "https://gs-supermarket.onrender.com/api",
   timeout: 20000,
 });
 
-// Request Interceptor (Auth Token சேர்க்க)
 api.interceptors.request.use((config) => {
   const t = localStorage.getItem("token");
   if (t) config.headers.Authorization = `Bearer ${t}`;
   return config;
 });
+
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response && error.response.status === 401) {
+      localStorage.removeItem("token");
+      if (window.location.pathname !== "/login") {
+        window.location.href = "/login";
+      }
+    }
+    return Promise.reject(error);
+  }
+);
 
 // Products
 export const fetchProducts = (params = {}) => api.get("/products", { params }).then((r) => r.data);
