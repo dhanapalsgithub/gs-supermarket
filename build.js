@@ -1,6 +1,12 @@
-const { ConsoleLog, Config, TwaManifest, Bubblewrap } = require('@bubblewrap/core');
+const bubblewrapCore = require('@bubblewrap/core');
 const path = require('path');
 const fs = require('fs');
+
+// Safely extract exports from @bubblewrap/core
+const ConsoleLog = bubblewrapCore.ConsoleLog;
+const Config = bubblewrapCore.Config;
+const TwaManifest = bubblewrapCore.TwaManifest;
+const Bubblewrap = bubblewrapCore.Bubblewrap || bubblewrapCore.default || bubblewrapCore;
 
 async function run() {
   const processLog = new ConsoleLog();
@@ -29,7 +35,7 @@ async function run() {
 
   console.log('Building Android Package (AAB/APK)...');
   
-  // Instantiate Bubblewrap class and trigger build
+  // Instantiate Bubblewrap class safely
   const bubblewrap = new Bubblewrap(config, twaManifest, processLog);
   const success = await bubblewrap.build(
     process.env.BUBBLEWRAP_KEYSTORE_PASSWORD,
