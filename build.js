@@ -12,9 +12,7 @@ async function run() {
     throw new Error('release.keystore file not found!');
   }
 
-  // Pass --skipJdkCheck and explicit JDK path to bypass interactive prompt completely
-  const jdkPath = process.env.JAVA_HOME || '/opt/hostedtoolcache/Java_Zulu_jdk/17.0.20-8/x64';
-  const buildCmd = `npx @bubblewrap/cli build --skipJdkCheck --skipDependenciesCheck --jdkPath="${jdkPath}" --signingKeyPath="${keystorePath}" --signingKeyAlias="${keyAlias}"`;
+  const buildCmd = `npx @bubblewrap/cli build --signingKeyPath="${keystorePath}" --signingKeyAlias="${keyAlias}"`;
 
   console.log('Executing:', buildCmd);
 
@@ -23,7 +21,6 @@ async function run() {
       stdio: 'inherit',
       env: {
         ...process.env,
-        JAVA_HOME: jdkPath,
         BUBBLEWRAP_KEYSTORE_PASSWORD: process.env.BUBBLEWRAP_KEYSTORE_PASSWORD,
         BUBBLEWRAP_KEY_PASSWORD: process.env.BUBBLEWRAP_KEY_PASSWORD
       }
