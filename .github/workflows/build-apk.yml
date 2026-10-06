@@ -29,12 +29,12 @@ jobs:
             echo "Error: KEYSTORE_BASE64 secret is not set!"
             exit 1
           fi
-          
-          # Clean spaces/newlines and decode cleanly using openssl
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | tr -d ' \r\n' | openssl base64 -d -A -out release.keystore
-          
+
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > release.keystore
+
           if [ ! -s release.keystore ]; then
-            echo "Error: Keystore file decoding produced an empty file. Check KEYSTORE_BASE64 secret."
+            echo "Error: Keystore file decoding produced an empty file."
+            echo "Ensure KEYSTORE_BASE64 contains valid base64-encoded keystore data."
             exit 1
           fi
           echo "Keystore successfully decoded!"
