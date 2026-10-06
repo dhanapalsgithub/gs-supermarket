@@ -8,13 +8,12 @@ async function run() {
   const keystorePath = path.join(__dirname, 'release.keystore');
   const keyAlias = process.env.RELEASE_KEY_ALIAS || 'release';
 
-  // Ensure keystore exists
   if (!fs.existsSync(keystorePath)) {
     throw new Error('release.keystore file not found!');
   }
 
-  // Run bubblewrap build using CLI directly with automated parameters
-  const buildCmd = `npx @bubblewrap/cli build --signingKeyPath="${keystorePath}" --signingKeyAlias="${keyAlias}"`;
+  // Pass --skipDependenciesCheck to bypass interactive JDK setup prompts
+  const buildCmd = `npx @bubblewrap/cli build --skipDependenciesCheck --signingKeyPath="${keystorePath}" --signingKeyAlias="${keyAlias}"`;
 
   console.log('Executing:', buildCmd);
 
