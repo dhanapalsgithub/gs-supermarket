@@ -34,14 +34,13 @@ jobs:
 
           if [ ! -s release.keystore ]; then
             echo "Error: Keystore file decoding produced an empty file."
-            echo "Ensure KEYSTORE_BASE64 contains valid base64-encoded keystore data."
             exit 1
           fi
           echo "Keystore successfully decoded!"
 
-      - name: Install Bubblewrap Core
+      - name: Install Bubblewrap CLI
         run: |
-          npm install @bubblewrap/core
+          npm install -g @bubblewrap/cli
 
       - name: Run Bubblewrap Core Build Script
         env:

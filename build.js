@@ -1,70 +1,37 @@
-const { ConsoleLog, Config, TwaManifest } = require('@bubblewrap/core');
+const { execSync } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 
-// Dynamically locate TwaBuilder across possible module paths
-let TwaBuilder;
-try {
-  TwaBuilder = require('@bubblewrap/core').TwaBuilder;
-} catch (e) {}
-
-if (!TwaBuilder) {
-  try {
-    TwaBuilder = require('@bubblewrap/core/lib/TwaBuilder').TwaBuilder || require('@bubblewrap/core/lib/TwaBuilder');
-  } catch (e) {}
-}
-
 async function run() {
-  const processLog = new ConsoleLog();
-  
-  // Load twa-manifest.json directly
-  const manifestPath = path.join(__dirname, 'twa-manifest.json');
-  
-  let twaManifest;
-  if (typeof TwaManifest.fromFile === 'function') {
-    twaManifest = await TwaManifest.fromFile(manifestPath);
-  } else {
-    const manifestJson = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
-    twaManifest = new TwaManifest(manifestJson);
+  console.log('Starting Bubblewrap CLI build...');
+
+  const keystorePath = path.join(__dirname, 'release.keystore');
+  const keyAlias = process.env.RELEASE_KEY_ALIAS || 'release';
+
+  // Ensure keystore exists
+  if (!fs.existsSync(keystorePath)) {
+    throw new Error('release.keystore file not found!');
   }
 
-  // Set signing key configuration directly from secrets
-  twaManifest.signingKey = {
-    path: path.join(__dirname, 'release.keystore'),
-    alias: process.env.RELEASE_KEY_ALIAS || 'release'
-  };
+  // Run bubblewrap build using CLI directly with automated parameters
+  const buildCmd = `npx @bubblewrap/cli build --signingKeyPath="${keystorePath}" --signingKeyAlias="${keyAlias}"`;
 
-  const config = new Config(
-    process.env.JAVA_HOME,
-    process.env.ANDROID_HOME
-  );
+  console.log('Executing:', buildCmd);
 
-  console.log('Building Android Package using TwaBuilder (AAB/APK)...');
-  
-  if (!TwaBuilder) {
-    throw new Error('Could not resolve TwaBuilder class from @bubblewrap/core');
+  try {
+    execSync(buildCmd, {
+      stdio: 'inherit',
+      env: {
+        ...process.env,
+        BUBBLEWRAP_KEYSTORE_PASSWORD: process.env.BUBBLEWRAP_KEYSTORE_PASSWORD,
+        BUBBLEWRAP_KEY_PASSWORD: process.env.BUBBLEWRAP_KEY_PASSWORD
+      }
+    });
+    console.log('Build completed successfully!');
+  } catch (error) {
+    console.error('Bubblewrap build failed:', error.message);
+    process.exit(1);
   }
-
-  // Instantiate TwaBuilder and trigger build
-  const builder = new TwaBuilder(
-    config,
-    twaManifest,
-    processLog
-  );
-
-  const success = await builder.build(
-    process.env.BUBBLEWRAP_KEYSTORE_PASSWORD,
-    process.env.BUBBLEWRAP_KEY_PASSWORD
-  );
-
-  if (!success) {
-    throw new Error('Bubblewrap TwaBuilder failed to generate release packages');
-  }
-
-  console.log('Build completed successfully!');
 }
 
-run().catch((err) => {
-  console.error('Build Error:', err);
-  process.exit(1);
-});
+run();
