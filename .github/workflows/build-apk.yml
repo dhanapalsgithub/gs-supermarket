@@ -29,32 +29,25 @@ jobs:
         run: |
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > release.keystore
 
-      - name: Install Bubblewrap CLI
-        run: npm install -g @bubblewrap/cli
-
-      - name: Configure Bubblewrap Environment
+      - name: Install Bubblewrap Dependencies
         run: |
-          npx bubblewrap updateConfig --jdkPath="$JAVA_HOME" --androidSdkPath="$ANDROID_HOME"
+          npm install @bubblewrap/core @bubblewrap/cli
 
-      - name: Generate Android Project Files
-        run: |
-          yes | npx bubblewrap update --manifest=./ || true
-
-      - name: Build Signed Android Package
+      - name: Run Node Build Script
         env:
-          BUBBLEWRAP_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
-          BUBBLEWRAP_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+          RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
         run: |
-          npx bubblewrap build \
-            --skipPwaValidation \
-            --signingKeyPath=release.keystore \
-            --signingKeyAlias="${{ secrets.RELEASE_KEY_ALIAS }}"
+          node build.js
 
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: App-Release-Files
           path: |
+            app-release-signed.apk
+            app-release-bundle.aab
             *.aab
             *.apk
           if-no-files-found: warn
