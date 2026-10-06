@@ -37,13 +37,13 @@ jobs:
           mkdir -p ~/.bubblewrap
           echo "{\"jdkPath\":\"$JAVA_HOME\",\"androidSdkPath\":\"$ANDROID_HOME\"}" > ~/.bubblewrap/config.json
 
-      - name: Initialize and Build TWA Project
+      - name: Build Signed TWA Package
         env:
           BUBBLEWRAP_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
           BUBBLEWRAP_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
         run: |
-          npx bubblewrap init --directory=./ --manifest=https://supermarket-tau.vercel.app/manifest.json
           npx bubblewrap build \
+            --manifest=./twa-manifest.json \
             --skipPwaValidation \
             --signingKeyPath=release.keystore \
             --signingKeyAlias="${{ secrets.RELEASE_KEY_ALIAS }}"
@@ -55,4 +55,6 @@ jobs:
           path: |
             *.aab
             *.apk
-          if-no-files-found: warn
+            app/build/outputs/**/*.apk
+            app/build/outputs/**/*.aab
+          if-no-files-found: error
