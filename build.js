@@ -1,4 +1,4 @@
-const { ConsoleLog, Config, generateProject, buildProject, TwaManifest } = require('@bubblewrap/core');
+const { ConsoleLog, Config, buildProject, TwaManifest } = require('@bubblewrap/core');
 const path = require('path');
 const fs = require('fs');
 
@@ -16,7 +16,7 @@ async function run() {
     twaManifest = new TwaManifest(manifestJson);
   }
 
-  // Set signing key configuration
+  // Set signing key configuration directly from secrets
   twaManifest.signingKey = {
     path: path.join(__dirname, 'release.keystore'),
     alias: process.env.RELEASE_KEY_ALIAS || 'release'
@@ -27,10 +27,7 @@ async function run() {
     process.env.ANDROID_HOME
   );
 
-  console.log('Generating Android Project...');
-  await generateProject(twaManifest, __dirname, config, processLog);
-
-  console.log('Building Android Package...');
+  console.log('Building Android Package (AAB/APK)...');
   const success = await buildProject(
     config,
     twaManifest,
