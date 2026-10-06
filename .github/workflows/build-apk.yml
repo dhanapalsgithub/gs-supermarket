@@ -32,12 +32,16 @@ jobs:
       - name: Install Bubblewrap CLI
         run: npm install -g @bubblewrap/cli
 
-      - name: Setup Bubblewrap CLI Environment Config
+      - name: Setup Bubblewrap CLI Config
         run: |
           mkdir -p ~/.bubblewrap
           echo "{\"jdkPath\":\"$JAVA_HOME\",\"androidSdkPath\":\"$ANDROID_HOME\"}" > ~/.bubblewrap/config.json
 
-      - name: Build TWA Android Package
+      - name: Initialize TWA Project
+        run: |
+          npx @bubblewrap/cli init --manifest="https://supermarket-tau.vercel.app/manifest.json" --skipPrompt
+
+      - name: Build Signed Android Package
         env:
           BUBBLEWRAP_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
           BUBBLEWRAP_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
