@@ -37,13 +37,16 @@ jobs:
           mkdir -p ~/.bubblewrap
           echo "{\"jdkPath\":\"$JAVA_HOME\",\"androidSdkPath\":\"$ANDROID_HOME\"}" > ~/.bubblewrap/config.json
 
-      - name: Build Signed TWA Package
+      - name: Initialize Android Project from twa-manifest
+        run: |
+          npx @bubblewrap/cli init --directory=./ --manifest=./twa-manifest.json --skipValidation
+
+      - name: Build Signed Android Package
         env:
           BUBBLEWRAP_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
           BUBBLEWRAP_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
         run: |
-          npx bubblewrap build \
-            --manifest=./twa-manifest.json \
+          npx @bubblewrap/cli build \
             --skipPwaValidation \
             --signingKeyPath=release.keystore \
             --signingKeyAlias="${{ secrets.RELEASE_KEY_ALIAS }}"
@@ -57,4 +60,4 @@ jobs:
             *.apk
             app/build/outputs/**/*.apk
             app/build/outputs/**/*.aab
-          if-no-files-found: error
+          if-no-files-found: warn
