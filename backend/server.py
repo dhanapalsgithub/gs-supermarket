@@ -344,14 +344,13 @@ async def create_customer(payload: CustomerCreate, _: dict = Depends(get_current
     }
     await db.customers.insert_one(doc)
     return {k: v for k, v in doc.items() if k != "_id"}
-
 @api.post("/customers/{identifier}/pay-credit")
 async def pay_customer_credit(identifier: str, payload: PayCreditPayload, user: dict = Depends(get_current_user)):
     clean_identifier = str(identifier).strip()
     phone_clean = str(payload.phone or identifier).strip()
     amt_paid = float(payload.amount)
 
-    # 1. Flexible customer lookup by ID, phone, or name
+    # 1. Flexible customer lookup by ID, phone, or mobile
     cust = await db.customers.find_one({
         "$or": [
             {"id": clean_identifier},
@@ -393,28 +392,23 @@ async def pay_customer_credit(identifier: str, payload: PayCreditPayload, user: 
     }
     await db.credit_payments.insert_one(payment_doc)
 
-    # 3. Update outstanding credit orders chronologically
+    # 3. Update outstanding credit orders chronologically and clear credit balances
     orders = await db.orders.find({
         "$or": [
             {"customer_phone": target_phone},
             {"phone": target_phone},
+            {"customer_phone": clean_identifier},
             {"customer_id": customer_id}
         ]
     }).sort("created_at", 1).to_list(1000)
 
     remaining_payment = amt_paid
     for ord_doc in orders:
-        if remaining_payment <= 0:
-            break
-            
-        pm = str(ord_doc.get("payment_method", "")).upper()
-        is_credit = "CREDIT" in pm or "NON PAY" in pm or "NON-PAY" in pm or ord_doc.get("payment_status") != "PAID"
-        
         tot = float(ord_doc.get("total", 0))
         current_order_paid = float(ord_doc.get("amount_paid", 0))
         order_balance = tot - current_order_paid
 
-        if is_credit and order_balance > 0:
+        if order_balance > 0:
             pay_for_this_order = min(remaining_payment, order_balance)
             new_order_paid = current_order_paid + pay_for_this_order
             remaining_payment -= pay_for_this_order
@@ -430,6 +424,8 @@ async def pay_customer_credit(identifier: str, payload: PayCreditPayload, user: 
                     }
                 }
             )
+            if remaining_payment <= 0:
+                break
 
     return {
         "success": True,
@@ -437,7 +433,6 @@ async def pay_customer_credit(identifier: str, payload: PayCreditPayload, user: 
         "amount_paid": amt_paid,
         "payment_id": payment_doc["id"]
     }
-
 @api.get("/customers/{identifier}/payment-history")
 async def get_customer_payment_history(identifier: str, _: dict = Depends(get_current_user)):
     clean_id = str(identifier).strip()
@@ -449,14 +444,15 @@ async def get_customer_payment_history(identifier: str, _: dict = Depends(get_cu
         ]
     })
     
-    phone = str(cust.get("phone", clean_id)).strip() if cust else clean_id
+    phone = str(cust.get("phone", cust.get("mobile", clean_id))).strip() if cust else clean_id
     cust_id = str(cust.get("id", clean_id)) if cust else clean_id
 
     history = await db.credit_payments.find({
         "$or": [
             {"customer_id": cust_id},
             {"phone": phone},
-            {"phone": clean_id}
+            {"phone": clean_id},
+            {"customer_id": clean_id}
         ]
     }, {"_id": 0}).sort("created_at", -1).to_list(500)
     

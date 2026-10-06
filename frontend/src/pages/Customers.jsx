@@ -64,9 +64,7 @@ export default function Customers() {
       setOrders(Array.isArray(ordRes.data) ? ordRes.data : []);
     } catch (err) {
       console.error('Error fetching data', err);
-    } finally {
-      setLoading(false);
-    }
+    } 
   };
 
   /* Process Credit Customers & Outstanding Balances */
@@ -114,7 +112,7 @@ export default function Customers() {
       }
     });
 
-    // 2. Include database customer records with direct credit balance or credit type
+    // 2. Include database customer records with direct credit balance
     allCustomers.forEach((cust) => {
       const phone = (cust.phone || cust.mobile || 'Unknown').trim();
       const directBalance = Number(cust.credit_balance || cust.outstanding_balance || 0);
@@ -224,10 +222,9 @@ export default function Customers() {
 
     try {
       setIsSubmittingPay(true);
-      const customerId = payCustomer.id || payCustomer.phone;
+      const customerId = payCustomer.phone || payCustomer.id;
       
-      // Update customer credit/payment API
-      await api.post(`/customers/${customerId}/pay-credit`, {
+      await api.post(`/customers/${encodeURIComponent(customerId)}/pay-credit`, {
         amount: Number(paymentAmount),
         payment_method: paymentMethod,
         phone: payCustomer.phone
@@ -235,7 +232,7 @@ export default function Customers() {
 
       alert('Payment updated successfully!');
       setIsPayModalOpen(false);
-      fetchCustomersAndOrders(); // Refresh table data and balance
+      await fetchCustomersAndOrders();
     } catch (err) {
       console.error('Error processing credit payment', err);
       alert('Failed to process payment. Please check API integration.');
@@ -250,13 +247,15 @@ export default function Customers() {
       setHistoryCustomer(cust);
       setLoadingHistory(true);
       setIsHistoryModalOpen(true);
-      const identifier = cust.id || cust.phone;
-      const res = await api.get(`/customers/${identifier}/payment-history`);
+      const identifier = cust.phone || cust.id;
+      const res = await api.get(`/customers/${encodeURIComponent(identifier)}/payment-history`);
       setPaymentHistory(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
       console.error('Error fetching payment history', err);
       setPaymentHistory([]);
-    } 
+    } finally {
+      setLoadingHistory(false);
+    }
   };
 
   const exportCSV = () => {
