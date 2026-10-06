@@ -48,7 +48,7 @@ jobs:
           cat <<EOF > ~/.bubblewrap/config.json
           {
             "jdkPath": "${JAVA_HOME}",
-            "androidSdkPath": "/usr/local/lib/android/sdk"
+            "androidSdkPath": "${ANDROID_HOME}"
           }
           EOF
           echo "Bubblewrap CLI config injected successfully!"
