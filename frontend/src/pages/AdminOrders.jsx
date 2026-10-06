@@ -8,12 +8,13 @@ import {
 import ReceiptModal from "../components/ReceiptModal";
 
 const STAGES = ["PENDING", "CONFIRMED", "SHIPPED", "DELIVERED"];
-const PAGE_SIZE = 6; // ஒரு பக்கத்திற்கு 6 ஆர்டர்கள்
+const PAGE_SIZE = 4; // ஒரு பக்கத்திற்கு 6 ஆர்டர்கள்
 
 export default function AdminOrders() {
   const [orders, setOrders] = useState([]);
   const [filter, setFilter] = useState("ALL");
   const [sourceFilter, setSourceFilter] = useState("ALL"); // ALL, WALK-IN, ONLINE
+  const [hasSeenOnline, setHasSeenOnline] = useState(false); // Track if online orders tab has been opened
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [page, setPage] = useState(1);
@@ -90,6 +91,14 @@ export default function AdminOrders() {
   }, [orders, filter, sourceFilter, startDate, endDate]);
 
   useEffect(() => { setPage(1); }, [filter, sourceFilter, startDate, endDate]);
+
+  // Handle Tab Click and Mark Online Tab as Seen
+  const handleTabClick = (tabId) => {
+    setSourceFilter(tabId);
+    if (tabId === "ONLINE") {
+      setHasSeenOnline(true);
+    }
+  };
 
   // Pagination Logic (6 items per page)
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE) || 1;
@@ -176,10 +185,13 @@ export default function AdminOrders() {
         ].map(tab => {
           const Icon = tab.icon;
           const isActive = sourceFilter === tab.id;
+          const isOnlineTab = tab.id === "ONLINE";
+          const showBadge = isOnlineTab ? (!hasSeenOnline && tab.count > 0) : true;
+
           return (
             <button
               key={tab.id}
-              onClick={() => setSourceFilter(tab.id)}
+              onClick={() => handleTabClick(tab.id)}
               className={`p-3 rounded-xl border flex items-center justify-center gap-2 transition font-bold text-xs md:text-sm ${
                 isActive 
                   ? "bg-indigo-600 text-white border-indigo-600 shadow-sm" 
@@ -188,9 +200,19 @@ export default function AdminOrders() {
             >
               <Icon className="w-4 h-4" />
               <span>{tab.label}</span>
-              <span className={`px-1.5 py-0.5 rounded-full text-[10px] ${isActive ? "bg-indigo-700 text-white" : "bg-slate-100 text-slate-600"}`}>
-                {tab.count}
-              </span>
+              {showBadge && (
+                <span 
+                  className={`px-1.5 py-0.5 rounded-full text-[10px] ${
+                    isOnlineTab && !hasSeenOnline
+                      ? "bg-amber-400 text-slate-900 animate-pulse font-bold ring-2 ring-amber-300"
+                      : isActive 
+                        ? "bg-indigo-700 text-white" 
+                        : "bg-slate-100 text-slate-600"
+                  }`}
+                >
+                  {tab.count}
+                </span>
+              )}
             </button>
           );
         })}
