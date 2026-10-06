@@ -8,18 +8,13 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout Repository
+        uses: actions/checkout@v3
 
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: 18
-
-      - name: Install Dependencies
-        run: npm install
-
-      - name: Build Web App
-        run: npm run build
 
       - name: Setup Java
         uses: actions/setup-java@v3
@@ -30,12 +25,25 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v2
 
+      - name: Decode Keystore File
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android.keystore
+
+      - name: Install Dependencies & Build Web App
+        run: |
+          npm install
+          npm run build --if-present
+
       - name: Install Bubblewrap CLI
         run: npm install -g @bubblewrap/cli
 
-      - name: Build Signed AAB and APK
+      - name: Build Signed Android Package
         run: |
-          npx @bubblewrap/cli build
+          npx @bubblewrap/cli build \
+            --signingKeyPath=android.keystore \
+            --signingKeyAlias="${{ secrets.RELEASE_KEY_ALIAS }}" \
+            --signingKeyPassword="${{ secrets.RELEASE_KEY_PASSWORD }}" \
+            --signingStorePassword="${{ secrets.RELEASE_STORE_PASSWORD }}"
 
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v3
