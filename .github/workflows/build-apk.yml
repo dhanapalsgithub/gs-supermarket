@@ -11,38 +11,26 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v3
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: 18
-
       - name: Setup Java
         uses: actions/setup-java@v3
         with:
           distribution: 'zulu'
           java-version: '17'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v2
-
       - name: Decode Keystore File
         run: |
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android.keystore
 
-      - name: Install Bubblewrap & Init TWA
-        run: |
-          npm install -g @bubblewrap/cli
-          npx @bubblewrap/cli init --manifest="https://supermarket-tau.vercel.app/manifest.json"
+      - name: Build Android Package via PWABuilder Action
+        uses: pwa-builder/pwa-action@v1
+        with:
+          manifest-url: 'https://supermarket-tau.vercel.app/manifest.json'
+          signing-key-path: 'android.keystore'
+          signing-key-alias: ${{ secrets.RELEASE_KEY_ALIAS }}
+          signing-key-password: ${{ secrets.RELEASE_KEY_PASSWORD }}
+          signing-store-password: ${{ secrets.RELEASE_STORE_PASSWORD }}
 
-      - name: Build Signed Android Package
-        run: |
-          npx @bubblewrap/cli build \
-            --signingKeyPath=android.keystore \
-            --signingKeyAlias="${{ secrets.RELEASE_KEY_ALIAS }}" \
-            --signingKeyPassword="${{ secrets.RELEASE_KEY_PASSWORD }}" \
-            --signingStorePassword="${{ secrets.RELEASE_STORE_PASSWORD }}"
-
-      - name: Upload Build Artifacts
+      - name: Upload Output Artifacts
         uses: actions/upload-artifact@v3
         with:
           name: App-Release-Files
