@@ -182,6 +182,11 @@ async def send_sms(phone: str, body: str) -> bool:
         return True
     except Exception:
         return False
+    
+    
+class ClearCreditPayload(BaseModel):
+    customer_phone: str
+    amount_paid: Optional[float] = None
 
 class Product(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -332,6 +337,61 @@ async def create_customer(payload: CustomerCreate, _: dict = Depends(get_current
     }
     await db.customers.insert_one(doc)
     return {k: v for k, v in doc.items() if k != "_id"}
+
+
+@api.post("/customers/clear-credit")
+async def clear_customer_credit(payload: ClearCreditPayload, _: dict = Depends(get_current_user)):
+    phone_clean = payload.customer_phone.strip()
+    
+    # 1. Update customer record balance
+    cust = await db.customers.find_one({"phone": phone_clean})
+    if not cust:
+        raise HTTPException(status_code=404, detail="Customer not found")
+    
+    current_bal = float(cust.get("credit_balance", 0.0))
+    settle_amt = payload.amount_paid if payload.amount_paid is not None else current_bal
+    new_bal = max(0.0, current_bal - settle_amt)
+    
+    await db.customers.update_one(
+        {"phone": phone_clean},
+        {"$set": {"credit_balance": new_bal, "updated_at": now_iso()}}
+    )
+    
+    # 2. Update unpaid credit orders for this customer (mark as PAID)
+    # Finding credit orders by phone
+    orders = await db.orders.find({"customer_phone": phone_clean}).to_list(1000)
+    for ord_doc in orders:
+        pm = str(ord_doc.get("payment_method", "")).upper()
+        if "CREDIT" in pm or ord_doc.get("payment_status") == "UNPAID":
+            tot = float(ord_doc.get("total", 0))
+            await db.orders.update_one(
+                {"id": ord_doc["id"]},
+                {
+                    "$set": {
+                        "amount_paid": tot,
+                        "payment_status": "PAID",
+                        "updated_at": now_iso()
+                    }
+                }
+            )
+            
+    return {"message": "Credit settled successfully", "remaining_balance": new_bal}
+
+
+@api.get("/customers/{phone}/orders")
+async def get_customer_orders(phone: str, sort_order: str = "desc", _: dict = Depends(get_current_user)):
+    """
+    Fetch order entries for a specific customer.
+    sort_order="desc" -> latest entry first, oldest last
+    sort_order="asc" -> oldest entry first, latest last
+    """
+    sort_dir = -1 if sort_order == "desc" else 1
+    orders = await db.orders.find(
+        {"$or": [{"customer_phone": phone}, {"phone": phone}]},
+        {"_id": 0}
+    ).sort("created_at", sort_dir).to_list(500)
+    
+    return orders
 
 @api.get("/suppliers")
 async def list_suppliers(_: dict = Depends(get_current_user)):

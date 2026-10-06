@@ -55,6 +55,14 @@ export const updateProfile = (payload) => api.put("/auth/profile", payload).then
 export const fetchStats = () => api.get("/stats/summary").then((r) => r.data);
 export const fetchReport = () => api.get("/stats/report").then((r) => r.data);
 
+// --- Add to api.js ---
+
+export const clearCustomerCredit = (phone, amount_paid = null) =>
+  api.post("/customers/clear-credit", { customer_phone: phone, amount_paid }).then((r) => r.data);
+
+export const fetchCustomerOrders = (phone, sortOrder = "desc") =>
+  api.get(`/customers/${phone}/orders`, { params: { sort_order: sortOrder } }).then((r) => r.data);
+
 // Settings
 export const fetchSettings = () => api.get("/settings").then((r) => r.data);
 export const updateSettings = (payload) => api.put("/settings", payload).then((r) => r.data);
