@@ -14,10 +14,10 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 20
 
       - name: Setup Java JDK
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: 'zulu'
           java-version: '17'
@@ -32,21 +32,18 @@ jobs:
       - name: Install Bubblewrap CLI
         run: npm install -g @bubblewrap/cli
 
-      - name: Configure Bubblewrap Environment
+      - name: Setup Bubblewrap CLI Configuration
         run: |
           mkdir -p ~/.bubblewrap
           echo "{\"jdkPath\":\"$JAVA_HOME\",\"androidSdkPath\":\"$ANDROID_HOME\"}" > ~/.bubblewrap/config.json
 
-      - name: Initialize Android TWA Project
-        run: |
-          printf '\n\n\n\n\n\n\n\n\n\n' | npx bubblewrap init --manifest="https://supermarket-tau.vercel.app/manifest.json" || true
-
-      - name: Build Signed Android Package
+      - name: Initialize and Build TWA Project
         env:
           BUBBLEWRAP_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
           BUBBLEWRAP_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
         run: |
-          yes | npx bubblewrap build \
+          npx bubblewrap init --directory=./ --manifest=https://supermarket-tau.vercel.app/manifest.json
+          npx bubblewrap build \
             --skipPwaValidation \
             --signingKeyPath=release.keystore \
             --signingKeyAlias="${{ secrets.RELEASE_KEY_ALIAS }}"
