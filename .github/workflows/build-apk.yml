@@ -29,13 +29,10 @@ jobs:
         run: |
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android.keystore
 
-      - name: Install Dependencies & Build Web App
+      - name: Install Bubblewrap & Init TWA
         run: |
-          npm install
-          npm run build --if-present
-
-      - name: Install Bubblewrap CLI
-        run: npm install -g @bubblewrap/cli
+          npm install -g @bubblewrap/cli
+          npx @bubblewrap/cli init --manifest="https://supermarket-tau.vercel.app/manifest.json"
 
       - name: Build Signed Android Package
         run: |
