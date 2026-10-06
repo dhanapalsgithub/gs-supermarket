@@ -29,17 +29,24 @@ jobs:
         run: |
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > release.keystore
 
-      - name: Install Dependencies
-        run: |
-          npm install @bubblewrap/core @bubblewrap/cli
+      - name: Install Bubblewrap CLI
+        run: npm install -g @bubblewrap/cli
 
-      - name: Run Node Build Script
-        env:
-          RELEASE_STORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
-          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
-          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+      - name: Setup Bubblewrap CLI Configuration
         run: |
-          node build.js
+          mkdir -p ~/.bubblewrap
+          echo "{\"jdkPath\":\"$JAVA_HOME\",\"androidSdkPath\":\"$ANDROID_HOME\"}" > ~/.bubblewrap/config.json
+
+      - name: Build TWA Project
+        env:
+          BUBBLEWRAP_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
+          BUBBLEWRAP_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+        run: |
+          yes | npx bubblewrap build \
+            --manifest=./twa-manifest.json \
+            --skipPwaValidation \
+            --signingKeyPath=release.keystore \
+            --signingKeyAlias="${{ secrets.RELEASE_KEY_ALIAS }}"
 
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
