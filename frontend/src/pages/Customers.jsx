@@ -256,9 +256,7 @@ export default function Customers() {
     } catch (err) {
       console.error('Error fetching payment history', err);
       setPaymentHistory([]);
-    } flex {
-      setLoadingHistory(false);
-    }
+    } 
   };
 
   const exportCSV = () => {
