@@ -46,13 +46,13 @@ jobs:
         run: |
           mkdir -p ~/.bubblewrap
 
-          # Dynamic detection of Android SDK Path
-          SDK_PATH="${ANDROID_HOME:-$ANDROID_SDK_ROOT}"
-          if [ -z "$SDK_PATH" ] || [ ! -d "$SDK_PATH" ]; then
-            SDK_PATH="/usr/local/lib/android/sdk"
+          # Locate Android SDK on GitHub Ubuntu Runner
+          SDK_PATH="/usr/local/lib/android/sdk"
+          if [ ! -d "$SDK_PATH" ]; then
+            SDK_PATH="${ANDROID_HOME}"
           fi
 
-          cat <<EOF > ~/.bubblewrap/config.json
+          cat <<EOF> ~/.bubblewrap/config.json
           {
             "jdkPath": "${JAVA_HOME}",
             "androidSdkPath": "${SDK_PATH}"
@@ -60,6 +60,7 @@ jobs:
           EOF
 
           echo "Bubblewrap CLI config injected successfully with SDK Path: ${SDK_PATH}"
+          cat ~/.bubblewrap/config.json
 
       - name: Run Bubblewrap Core Build Script
         env:
