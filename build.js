@@ -7,16 +7,27 @@ async function run() {
 
   const keystorePath = path.join(__dirname, 'release.keystore');
   const keyAlias = process.env.RELEASE_KEY_ALIAS || 'release';
+  const manifestPath = path.join(__dirname, 'twa-manifest.json');
 
   if (!fs.existsSync(keystorePath)) {
     throw new Error('release.keystore file not found!');
   }
 
-  // Set default SDK/JDK paths for GitHub Actions environment
   const androidSdkPath = process.env.ANDROID_HOME || '/usr/local/lib/android/sdk';
   const javaHomePath = process.env.JAVA_HOME;
 
-  // Added --skipConfig to bypass interactive prompts and use ~/.bubblewrap/config.json
+  if (fs.existsSync(manifestPath)) {
+    try {
+      const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+      manifest.androidSdkPath = androidSdkPath;
+      manifest.jdkPath = javaHomePath;
+      fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
+      console.log('Updated twa-manifest.json with Android SDK path:', androidSdkPath);
+    } catch (e) {
+      console.warn('Could not update twa-manifest.json:', e.message);
+    }
+  }
+
   const buildCmd = `npx @bubblewrap/cli build --skipConfig --signingKeyPath="${keystorePath}" --signingKeyAlias="${keyAlias}"`;
 
   console.log('Executing:', buildCmd);

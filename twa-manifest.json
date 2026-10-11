@@ -23,5 +23,6 @@
   "features": {},
   "alphaDependencies": {
     "enabled": false
-  }
+  },
+  "androidSdkPath": "/usr/local/lib/android/sdk"
 }
