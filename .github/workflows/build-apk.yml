@@ -30,7 +30,7 @@ jobs:
             exit 1
           fi
 
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | tr -d '\r\n ' | base64 -d > release.keystore
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | tr -d '\r\n ' | base64 --decode > release.keystore || echo "${{ secrets.KEYSTORE_BASE64 }}" | tr -d '\r\n ' | base64 -d > release.keystore
 
           if [ ! -s release.keystore ]; then
             echo "Error: Keystore file decoding produced an empty file."
