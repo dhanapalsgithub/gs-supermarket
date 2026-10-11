@@ -32,6 +32,7 @@ jobs:
             exit 1
           fi
 
+          # Clean line breaks and space characters safely via env var
           echo "$KEYSTORE_BASE64" | tr -d ' \t\n\r' | base64 --decode > release.keystore || echo "$KEYSTORE_BASE64" | tr -d ' \t\n\r' | base64 -d > release.keystore
 
           if [ ! -s release.keystore ]; then
