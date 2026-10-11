@@ -12,7 +12,12 @@ async function run() {
     throw new Error('release.keystore file not found!');
   }
 
-  const buildCmd = `npx @bubblewrap/cli build --signingKeyPath="${keystorePath}" --signingKeyAlias="${keyAlias}"`;
+  // Set default SDK/JDK paths for GitHub Actions environment
+  const androidSdkPath = process.env.ANDROID_HOME || '/usr/local/lib/android/sdk';
+  const javaHomePath = process.env.JAVA_HOME;
+
+  // Added --skipConfig to bypass interactive prompts and use ~/.bubblewrap/config.json
+  const buildCmd = `npx @bubblewrap/cli build --skipConfig --signingKeyPath="${keystorePath}" --signingKeyAlias="${keyAlias}"`;
 
   console.log('Executing:', buildCmd);
 
@@ -21,6 +26,9 @@ async function run() {
       stdio: 'inherit',
       env: {
         ...process.env,
+        ANDROID_HOME: androidSdkPath,
+        ANDROID_SDK_ROOT: androidSdkPath,
+        JAVA_HOME: javaHomePath,
         BUBBLEWRAP_KEYSTORE_PASSWORD: process.env.BUBBLEWRAP_KEYSTORE_PASSWORD,
         BUBBLEWRAP_KEY_PASSWORD: process.env.BUBBLEWRAP_KEY_PASSWORD
       }

@@ -44,31 +44,29 @@ jobs:
         run: |
           npm install -g @bubblewrap/cli
 
-      - name: Configure Bubblewrap Environment
+      - name: Setup Bubblewrap Config & Android SDK
         run: |
           mkdir -p ~/.bubblewrap
 
-          # Locate Android SDK directory
-          SDK_DIR="/usr/local/lib/android/sdk"
-          if [ ! -d "$SDK_DIR" ]; then
-            SDK_DIR="$ANDROID_HOME"
-          fi
+          SDK_PATH="/usr/local/lib/android/sdk"
 
           cat <<EOF > ~/.bubblewrap/config.json
           {
             "jdkPath": "${JAVA_HOME}",
-            "androidSdkPath": "${SDK_DIR}"
+            "androidSdkPath": "${SDK_PATH}"
           }
           EOF
 
           echo "Accepting Android SDK licenses..."
-          yes | ${SDK_DIR}/cmdline-tools/latest/bin/sdkmanager --licenses || true
+          yes | ${SDK_PATH}/cmdline-tools/latest/bin/sdkmanager --licenses || true
 
       - name: Run Core Build Script
         env:
           BUBBLEWRAP_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
           BUBBLEWRAP_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
           RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          ANDROID_HOME: /usr/local/lib/android/sdk
+          ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
         run: |
           node build.js
 
