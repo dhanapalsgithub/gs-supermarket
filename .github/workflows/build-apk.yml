@@ -48,19 +48,19 @@ jobs:
         run: |
           mkdir -p ~/.bubblewrap
 
-          SDK_PATH="${ANDROID_HOME}"
-          if [ ! -d "$SDK_PATH" ]; then
+          SDK_PATH="${ANDROID_HOME:-${ANDROID_SDK_ROOT}}"
+          if [ -z "$SDK_PATH" ] || [ ! -d "$SDK_PATH" ]; then
             SDK_PATH="/usr/local/lib/android/sdk"
           fi
 
-          cat <<EOF> ~/.bubblewrap/config.json
+          cat <<EOF > ~/.bubblewrap/config.json
           {
             "jdkPath": "${JAVA_HOME}",
             "androidSdkPath": "${SDK_PATH}"
           }
           EOF
 
-          echo "Bubblewrap config created successfully."
+          echo "Bubblewrap config created with SDK path: ${SDK_PATH}"
 
       - name: Run Core Build Script
         env:
