@@ -42,14 +42,13 @@ jobs:
         run: |
           npm install -g @bubblewrap/cli
 
-      - name: Setup Bubblewrap Config (Bypass CLI Prompts)
+      - name: Setup Bubblewrap Config
         run: |
           mkdir -p ~/.bubblewrap
 
-          # Locate Android SDK on GitHub Ubuntu Runner
-          SDK_PATH="/usr/local/lib/android/sdk"
+          SDK_PATH="${ANDROID_HOME}"
           if [ ! -d "$SDK_PATH" ]; then
-            SDK_PATH="${ANDROID_HOME}"
+            SDK_PATH="/usr/local/lib/android/sdk"
           fi
 
           cat <<EOF> ~/.bubblewrap/config.json
@@ -59,10 +58,9 @@ jobs:
           }
           EOF
 
-          echo "Bubblewrap CLI config injected successfully with SDK Path: ${SDK_PATH}"
-          cat ~/.bubblewrap/config.json
+          echo "Bubblewrap config created successfully."
 
-      - name: Run Bubblewrap Core Build Script
+      - name: Run Core Build Script
         env:
           BUBBLEWRAP_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
           BUBBLEWRAP_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
