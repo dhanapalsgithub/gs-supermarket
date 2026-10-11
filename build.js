@@ -13,7 +13,7 @@ async function run() {
     throw new Error('release.keystore file not found!');
   }
 
-  const androidSdkPath = '/usr/local/lib/android/sdk';
+  const androidSdkPath = '/home/runner/android-sdk';
   const javaHomePath = process.env.JAVA_HOME;
 
   if (fs.existsSync(manifestPath)) {
@@ -22,7 +22,7 @@ async function run() {
       manifest.androidSdkPath = androidSdkPath;
       manifest.jdkPath = javaHomePath;
       fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
-      console.log('Updated twa-manifest.json with SDK path:', androidSdkPath);
+      console.log('Updated twa-manifest.json with target SDK path:', androidSdkPath);
     } catch (e) {
       console.warn('Could not update twa-manifest.json:', e.message);
     }

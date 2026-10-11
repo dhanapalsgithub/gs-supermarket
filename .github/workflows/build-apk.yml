@@ -47,19 +47,18 @@ jobs:
       - name: Setup Bubblewrap Doctor Configuration
         run: |
           mkdir -p ~/.bubblewrap
+          mkdir -p /home/runner/android-sdk
 
-          # Install specific required build-tools for Bubblewrap inside runner SDK
-          yes | /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --licenses || true
-          /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager "build-tools;33.0.2" "platforms;android-33" "platform-tools"
-
+          # Configure Bubblewrap to use dedicated runner SDK path and Java JDK
           cat <<EOF > ~/.bubblewrap/config.json
           {
             "jdkPath": "${JAVA_HOME}",
-            "androidSdkPath": "/usr/local/lib/android/sdk"
+            "androidSdkPath": "/home/runner/android-sdk"
           }
           EOF
 
-          echo "Config configured with JDK and SDK."
+          # Run bubblewrap doctor to auto-install any missing Android SDK dependencies
+          npx @bubblewrap/cli doctor || true
 
       - name: Run Core Build Script
         env:
