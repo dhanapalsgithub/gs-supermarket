@@ -32,7 +32,7 @@ jobs:
             exit 1
           fi
 
-          echo "$KEYSTORE_BASE64" | tr -d ' \t\n\r' | base64 --decode > release.keystore || echo "$KEYSTORE_BASE64" | tr -d ' \t\n\r' | base64 -d > release.keystore
+          python3 -c "import base64, os; data=os.environ['KEYSTORE_BASE64'].strip(); open('release.keystore', 'wb').write(base64.b64decode(data))"
 
           if [ ! -s release.keystore ]; then
             echo "Error: Keystore file decoding produced an empty file."
