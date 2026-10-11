@@ -23,6 +23,13 @@ jobs:
           distribution: 'zulu'
           java-version: '17'
 
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android Build Tools
+        run: |
+          sdkmanager --install "build-tools;34.0.0" "platforms;android-34"
+
       - name: Decode Keystore File
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
@@ -44,37 +51,24 @@ jobs:
         run: |
           npm install -g @bubblewrap/cli
 
-      - name: Setup Bubblewrap Config & Android SDK
+      - name: Setup Bubblewrap Config
         run: |
           mkdir -p ~/.bubblewrap
-
-          # Locate standard GitHub Actions Android SDK Path
-          SDK_PATH="$ANDROID_HOME"
-          if [ -z "$SDK_PATH" ] || [ ! -d "$SDK_PATH" ]; then
-            SDK_PATH="$ANDROID_SDK_ROOT"
-          fi
-          if [ -z "$SDK_PATH" ] || [ ! -d "$SDK_PATH" ]; then
-            SDK_PATH="/usr/local/lib/android/sdk"
-          fi
 
           cat <<EOF > ~/.bubblewrap/config.json
           {
             "jdkPath": "${JAVA_HOME}",
-            "androidSdkPath": "${SDK_PATH}"
+            "androidSdkPath": "${ANDROID_HOME}"
           }
           EOF
 
-          echo "Bubblewrap config created successfully."
-          echo "Using JDK: ${JAVA_HOME}"
-          echo "Using Android SDK: ${SDK_PATH}"
+          echo "Bubblewrap config configured with SDK: ${ANDROID_HOME}"
 
       - name: Run Core Build Script
         env:
           BUBBLEWRAP_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
           BUBBLEWRAP_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
           RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
-          ANDROID_HOME: /usr/local/lib/android/sdk
-          ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
         run: |
           node build.js
 
