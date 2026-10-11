@@ -13,7 +13,6 @@ async function run() {
     throw new Error('release.keystore file not found!');
   }
 
-  // Use ANDROID_HOME or standard runner path dynamically
   const androidSdkPath = process.env.ANDROID_HOME || '/usr/local/lib/android/sdk';
   const javaHomePath = process.env.JAVA_HOME;
 
@@ -29,7 +28,6 @@ async function run() {
     }
   }
 
-  // Use npx bubblewrap build with --skipConfig flag
   const buildCmd = `npx @bubblewrap/cli build --skipConfig --signingKeyPath="${keystorePath}" --signingKeyAlias="${keyAlias}"`;
 
   console.log('Executing:', buildCmd);
