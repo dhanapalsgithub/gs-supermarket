@@ -44,29 +44,28 @@ jobs:
         run: |
           npm install -g @bubblewrap/cli
 
-      - name: Setup Bubblewrap Config & Android SDK
+      - name: Setup Bubblewrap Doctor Configuration
         run: |
           mkdir -p ~/.bubblewrap
 
-          SDK_PATH="/usr/local/lib/android/sdk"
+          # Install specific required build-tools for Bubblewrap inside runner SDK
+          yes | /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --licenses || true
+          /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager "build-tools;33.0.2" "platforms;android-33" "platform-tools"
 
           cat <<EOF > ~/.bubblewrap/config.json
           {
             "jdkPath": "${JAVA_HOME}",
-            "androidSdkPath": "${SDK_PATH}"
+            "androidSdkPath": "/usr/local/lib/android/sdk"
           }
           EOF
 
-          echo "Accepting Android SDK licenses..."
-          yes | ${SDK_PATH}/cmdline-tools/latest/bin/sdkmanager --licenses || true
+          echo "Config configured with JDK and SDK."
 
       - name: Run Core Build Script
         env:
           BUBBLEWRAP_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_STORE_PASSWORD }}
           BUBBLEWRAP_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
           RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
-          ANDROID_HOME: /usr/local/lib/android/sdk
-          ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
         run: |
           node build.js
 
