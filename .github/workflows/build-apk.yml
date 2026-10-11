@@ -44,29 +44,24 @@ jobs:
         run: |
           npm install -g @bubblewrap/cli
 
-      - name: Setup Bubblewrap Config & Verify SDK
+      - name: Setup Bubblewrap Config via Doctor
         run: |
           mkdir -p ~/.bubblewrap
 
-          # Detect Android SDK Path accurately on ubuntu-latest
-          TARGET_SDK_PATH="${ANDROID_HOME}"
-          if [ -z "$TARGET_SDK_PATH" ] || [ ! -d "$TARGET_SDK_PATH" ]; then
-            TARGET_SDK_PATH="/usr/local/lib/android/sdk"
-          fi
+          SDK_PATH="/usr/local/lib/android/sdk"
 
           cat <<EOF > ~/.bubblewrap/config.json
           {
             "jdkPath": "${JAVA_HOME}",
-            "androidSdkPath": "${TARGET_SDK_PATH}"
+            "androidSdkPath": "${SDK_PATH}"
           }
           EOF
 
-          echo "Bubblewrap config created successfully."
-          echo "JDK Path: ${JAVA_HOME}"
-          echo "Android SDK Path: ${TARGET_SDK_PATH}"
+          # Ensure Android licenses are accepted for this SDK path
+          yes | ${SDK_PATH}/cmdline-tools/latest/bin/sdkmanager --licenses || true
+          ${SDK_PATH}/cmdline-tools/latest/bin/sdkmanager "build-tools;33.0.2" "platforms;android-33" || true
 
-          # Accept SDK licenses
-          yes | ${TARGET_SDK_PATH}/cmdline-tools/latest/bin/sdkmanager --licenses || true
+          echo "Bubblewrap setup completed successfully."
 
       - name: Run Core Build Script
         env:
