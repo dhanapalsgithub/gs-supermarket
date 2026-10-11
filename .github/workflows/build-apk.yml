@@ -32,7 +32,7 @@ jobs:
             exit 1
           fi
 
-          python3 -c "import base64, os; data=os.environ['KEYSTORE_BASE64'].strip(); open('release.keystore', 'wb').write(base64.b64decode(data))"
+          python3 -c "import base64, os; s=os.environ['KEYSTORE_BASE64'].strip(); s += '=' * (-len(s) % 4); open('release.keystore', 'wb').write(base64.b64decode(s))"
 
           if [ ! -s release.keystore ]; then
             echo "Error: Keystore file decoding produced an empty file."
