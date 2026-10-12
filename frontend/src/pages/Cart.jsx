@@ -4,11 +4,7 @@ import { money } from "../lib/api";
 import { Plus, Minus, Trash2, ShoppingBag, ArrowRight } from "lucide-react";
 
 export default function Cart() {
-  const { items, setQty, remove, updateQty, removeItem, subtotal } = useCart();
-
-  // Safe handlers to support any context function names
-  const handleSetQty = setQty || updateQty;
-  const handleRemove = remove || removeItem;
+  const { items, setQty, remove, subtotal } = useCart();
 
   const tax = subtotal * 0.05;
   const total = subtotal + tax;
@@ -65,7 +61,7 @@ export default function Cart() {
               <div className="inline-flex items-center bg-white rounded-lg border border-slate-200 shadow-sm">
                 <button
                   data-testid={`cart-dec-${it.product_id}`}
-                  onClick={() => handleSetQty && handleSetQty(it.product_id, it.quantity - 1)}
+                  onClick={() => setQty(it.product_id, it.quantity - 1)}
                   className="p-2 hover:bg-slate-50 active:bg-slate-100 rounded-l-lg text-slate-600 transition-colors"
                 >
                   <Minus className="w-3.5 h-3.5" />
@@ -75,7 +71,7 @@ export default function Cart() {
                 </span>
                 <button
                   data-testid={`cart-inc-${it.product_id}`}
-                  onClick={() => handleSetQty && handleSetQty(it.product_id, it.quantity + 1)}
+                  onClick={() => setQty(it.product_id, it.quantity + 1)}
                   className="p-2 hover:bg-slate-50 active:bg-slate-100 rounded-r-lg text-slate-600 transition-colors"
                 >
                   <Plus className="w-3.5 h-3.5" />
@@ -88,7 +84,7 @@ export default function Cart() {
                 </div>
                 <button
                   data-testid={`cart-rm-${it.product_id}`}
-                  onClick={() => handleRemove && handleRemove(it.product_id)}
+                  onClick={() => remove(it.product_id)}
                   className="text-slate-400 hover:text-rose-500 p-1.5 rounded-lg active:scale-90 transition-all"
                 >
                   <Trash2 className="w-4 h-4" />
@@ -102,8 +98,8 @@ export default function Cart() {
       <aside className="glass-strong p-4 sm:p-5 h-fit lg:sticky lg:top-24 space-y-3 rounded-2xl">
         <div className="label-cap">Order Summary</div>
         <div className="space-y-2">
-          <CartRow label="Subtotal" value={money(subtotal)} />
-          <CartRow label="Tax (5%)" value={money(tax)} />
+          <Row label="Subtotal" value={money(subtotal)} />
+          <Row label="Tax (5%)" value={money(tax)} />
         </div>
         <div className="border-t border-slate-200/80 pt-3 flex items-center justify-between">
           <span className="label-cap text-slate-700">Total</span>
@@ -132,7 +128,7 @@ export default function Cart() {
   );
 }
 
-function CartRow({ label, value }) {
+function Row({ label, value }) {
   return (
     <div className="flex items-center justify-between text-sm">
       <span className="text-slate-500">{label}</span>
