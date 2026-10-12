@@ -4,11 +4,16 @@ import { money } from "../lib/api";
 import { Plus, Minus, Trash2, ShoppingBag, ArrowRight } from "lucide-react";
 
 export default function Cart() {
-  const { items, setQty, remove, subtotal } = useCart();
+  const { items, setQty, remove, updateQty, removeItem, subtotal } = useCart();
+  
+  // Safe handlers to support any context function names
+  const handleSetQty = setQty || updateQty;
+  const handleRemove = remove || removeItem;
+
   const tax = subtotal * 0.05;
   const total = subtotal + tax;
 
-  if (items.length === 0) {
+  if (!items || items.length === 0) {
     return (
       <div className="max-w-3xl mx-auto p-4 sm:p-8 text-center">
         <div className="glass p-8 sm:p-12 mt-8 sm:mt-16 rounded-2xl">
@@ -44,12 +49,10 @@ export default function Cart() {
               data-testid={`cart-item-${it.product_id}`}
               className="glass p-3 sm:p-4 rounded-2xl flex flex-wrap sm:flex-nowrap items-center gap-3 sm:gap-4 border border-slate-100 shadow-sm"
             >
-              {/* Product Icon */}
               <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-xl bg-white/80 border border-slate-200/60 flex items-center justify-center flex-shrink-0">
                 <ShoppingBag className="w-5 h-5 sm:w-6 sm:h-6 text-slate-400" />
               </div>
 
-              {/* Product Info */}
               <div className="flex-1 min-w-[120px]">
                 <div className="font-semibold text-sm sm:text-base text-slate-800 truncate">
                   {it.name}
@@ -59,11 +62,10 @@ export default function Cart() {
                 </div>
               </div>
 
-              {/* Quantity Adjuster */}
               <div className="inline-flex items-center bg-white rounded-lg border border-slate-200 shadow-sm">
                 <button
                   data-testid={`cart-dec-${it.product_id}`}
-                  onClick={() => setQty(it.product_id, it.quantity - 1)}
+                  onClick={() => handleSetQty && handleSetQty(it.product_id, it.quantity - 1)}
                   className="p-2 hover:bg-slate-50 active:bg-slate-100 rounded-l-lg text-slate-600 transition-colors"
                 >
                   <Minus className="w-3.5 h-3.5" />
@@ -73,21 +75,20 @@ export default function Cart() {
                 </span>
                 <button
                   data-testid={`cart-inc-${it.product_id}`}
-                  onClick={() => setQty(it.product_id, it.quantity + 1)}
+                  onClick={() => handleSetQty && handleSetQty(it.product_id, it.quantity + 1)}
                   className="p-2 hover:bg-slate-50 active:bg-slate-100 rounded-r-lg text-slate-600 transition-colors"
                 >
                   <Plus className="w-3.5 h-3.5" />
                 </button>
               </div>
 
-              {/* Subtotal & Delete Action */}
               <div className="flex items-center justify-end gap-2 ml-auto sm:ml-0">
                 <div className="w-20 sm:w-24 text-right font-mono-num font-bold text-sm sm:text-base text-indigo-600">
                   {money(it.subtotal)}
                 </div>
                 <button
                   data-testid={`cart-rm-${it.product_id}`}
-                  onClick={() => remove(it.product_id)}
+                  onClick={() => handleRemove && handleRemove(it.product_id)}
                   className="text-slate-400 hover:text-rose-500 p-1.5 rounded-lg active:scale-90 transition-all"
                 >
                   <Trash2 className="w-4 h-4" />
@@ -98,12 +99,11 @@ export default function Cart() {
         </div>
       </div>
 
-      {/* Sidebar Summary */}
       <aside className="glass-strong p-4 sm:p-5 h-fit lg:sticky lg:top-24 space-y-3 rounded-2xl">
         <div className="label-cap">Order Summary</div>
         <div className="space-y-2">
-          <Row label="Subtotal" value={money(subtotal)} />
-          <Row label="Tax (5%)" value={money(tax)} />
+          <CartRow label="Subtotal" value={money(subtotal)} />
+          <CartRow label="Tax (5%)" value={money(tax)} />
         </div>
         <div className="border-t border-slate-200/80 pt-3 flex items-center justify-between">
           <span className="label-cap text-slate-700">Total</span>
@@ -132,7 +132,7 @@ export default function Cart() {
   );
 }
 
-function Row({ label, value }) {
+function CartRow({ label, value }) {
   return (
     <div className="flex items-center justify-between text-sm">
       <span className="text-slate-500">{label}</span>
