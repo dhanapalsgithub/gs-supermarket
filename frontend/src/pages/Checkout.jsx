@@ -23,7 +23,7 @@ export default function Checkout() {
     setBusy(true);
     try {
       const order = await createOrder({
-        items: items.map((it) => ({
+        items: (items || []).map((it) => ({
           product_id: it.product_id,
           name: it.name,
           price: it.price,
@@ -82,7 +82,7 @@ export default function Checkout() {
     );
   }
 
-  if (items.length === 0) {
+  if (!items || items.length === 0) {
     return (
       <div className="max-w-md mx-auto p-4 sm:p-8 text-center text-slate-500">
         <div className="glass p-8 mt-12 sm:mt-16 rounded-2xl">
@@ -106,7 +106,6 @@ export default function Checkout() {
           <h1 className="text-2xl font-extrabold text-slate-900">Delivery & Payment</h1>
         </div>
 
-        {/* Delivery Section */}
         <div className="glass p-4 sm:p-5 space-y-3 rounded-2xl">
           <div className="label-cap flex items-center gap-2">
             <Truck className="w-3.5 h-3.5" /> Delivery details
@@ -136,7 +135,6 @@ export default function Checkout() {
           </label>
         </div>
 
-        {/* Payment Methods */}
         <div className="glass p-4 sm:p-5 space-y-3 rounded-2xl">
           <div className="label-cap">Payment Method</div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -188,7 +186,6 @@ export default function Checkout() {
         </div>
       </div>
 
-      {/* Order Summary Sidebar */}
       <aside className="glass-strong p-4 sm:p-5 h-fit lg:sticky lg:top-24 space-y-3 rounded-2xl">
         <div className="label-cap">Order Summary</div>
         <div className="max-h-60 overflow-y-auto space-y-2 pr-1">

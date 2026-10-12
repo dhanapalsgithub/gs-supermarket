@@ -1,7 +1,7 @@
 import { NavLink, Outlet, useNavigate, Link } from "react-router-dom";
 import { useAuth, useCart } from "../context/AuthContext";
 import { ShoppingBag, Heart, ShoppingCart, Package, User, LogOut, LogIn } from "lucide-react";
-import GSLogo, { GSLogoWithText } from "../components/GSLogo";
+import { GSLogoWithText } from "../components/GSLogo";
 import Footer from "../components/Footer";
 
 export default function UserShell() {
@@ -9,7 +9,7 @@ export default function UserShell() {
   const { items } = useCart();
   const nav = useNavigate();
 
-  const cartCount = items.reduce((s, it) => s + it.quantity, 0);
+  const cartCount = (items || []).reduce((s, it) => s + (it.quantity || 0), 0);
 
   const NavItem = ({ to, icon: Icon, label, badge, tid }) => (
     <NavLink
@@ -25,7 +25,6 @@ export default function UserShell() {
       }
     >
       <Icon className="w-4 h-4 flex-shrink-0" />
-      {/* Hide label text on tiny screens to avoid overflow */}
       <span className="hidden md:inline">{label}</span>
       {badge > 0 && (
         <span className="absolute -top-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-indigo-500 text-white text-[10px] flex items-center justify-center font-bold">
@@ -37,7 +36,7 @@ export default function UserShell() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="sticky top-0 z-40 glass border-0 border-b border-white/40 rounded-none px-2 sm:px-4 md:px-8 py-2.5 flex items-center justify-between gap-2 overflow-x-auto">
+      <header className="sticky top-0 z-40 glass border-0 border-b border-white/40 rounded-none px-3 sm:px-6 py-2.5 flex items-center justify-between gap-2">
         <Link to="/shop" className="flex items-center flex-shrink-0">
           <GSLogoWithText size={32} subtitle="Billing" />
         </Link>
