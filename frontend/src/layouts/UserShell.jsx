@@ -1,6 +1,7 @@
 import { NavLink, Outlet, useNavigate, Link } from "react-router-dom";
 import { useAuth, useCart } from "../context/AuthContext";
 import { ShoppingBag, Heart, ShoppingCart, Package, User, LogOut, LogIn } from "lucide-react";
+// Safe path for components from layouts folder
 import { GSLogoWithText } from "../components/GSLogo";
 import Footer from "../components/Footer";
 
