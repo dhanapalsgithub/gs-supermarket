@@ -36,7 +36,7 @@ export default function POS() {
 
   /* State for custom / "Other" billing items modal */
   const [showCustomModal, setShowCustomModal] = useState(false);
-  const [customInput, setCustomInput] = useState({ name: "", price: "" });
+  const [customInput, setCustomInput] = useState({ name: "", price: "", quantity: "1", unit: "pcs" });
   const [pendingCustomItems, setPendingCustomItems] = useState([]);
 
   const load = useCallback(async () => {
@@ -94,26 +94,32 @@ export default function POS() {
     toast.success(`Added ${p.name}`, { duration: 1000 });
   }, []);
 
-  /* Add custom item to modal's pending list and re-focus input */
+  /* Add custom item with Qty, Unit, and Price */
   const handleAddPendingCustom = (e) => {
     e.preventDefault();
     const priceNum = parseFloat(customInput.price);
+    const qtyNum = parseFloat(customInput.quantity) || 1;
+
     if (!customInput.name.trim() || isNaN(priceNum) || priceNum <= 0) {
       return toast.error("Please enter a valid item name and price");
+    }
+
+    if (isNaN(qtyNum) || qtyNum <= 0) {
+      return toast.error("Please enter a valid quantity");
     }
 
     const newItem = {
       product_id: null,
       name: customInput.name.trim(),
       price: priceNum,
-      quantity: 1,
-      subtotal: priceNum,
-      unit: "pcs",
+      quantity: qtyNum,
+      subtotal: priceNum * qtyNum,
+      unit: customInput.unit || "pcs",
       is_custom: true
     };
 
     setPendingCustomItems((prev) => [...prev, newItem]);
-    setCustomInput({ name: "", price: "" });
+    setCustomInput({ name: "", price: "", quantity: "1", unit: "pcs" });
 
     setTimeout(() => {
       customNameInputRef.current?.focus();
@@ -134,7 +140,7 @@ export default function POS() {
     setCart((prev) => [...prev, ...pendingCustomItems]);
     toast.success(`Added ${pendingCustomItems.length} custom item(s) to cart`);
     setPendingCustomItems([]);
-    setCustomInput({ name: "", price: "" });
+    setCustomInput({ name: "", price: "", quantity: "1", unit: "pcs" });
     setShowCustomModal(false);
   };
 
@@ -216,7 +222,6 @@ export default function POS() {
     try {
       const isCredit = method === "CREDIT";
 
-      // Map frontend selection to allowed backend values ('CASH', 'UPI', 'CARD', 'COD')
       let finalPaymentMethod = method;
       if (method === "GPAY") {
         finalPaymentMethod = "UPI";
@@ -224,14 +229,14 @@ export default function POS() {
         finalPaymentMethod = "CASH";
       }
 
-      // Clean order payload matching backend validation schemas
       const orderPayload = {
         items: cart.map((c) => ({
           product_id: c.product_id || null, 
           name: String(c.name || "Item"), 
           price: Number(c.price || 0), 
           quantity: Number(c.quantity || 1), 
-          subtotal: Number(c.subtotal || 0) 
+          subtotal: Number(c.subtotal || 0),
+          unit: c.unit || "pcs"
         })),
         subtotal: Number(subtotal.toFixed(2)), 
         tax_rate: Number(TAX_RATE), 
@@ -368,7 +373,7 @@ export default function POS() {
                     <div className="text-sm font-semibold truncate">
                       {it.name} {it.is_custom && <span className="text-[10px] text-amber-600 bg-amber-100 px-1.5 py-0.5 rounded ml-1 font-bold">Custom</span>}
                     </div>
-                    <div className="text-[11px] text-slate-500 font-mono-num">{money(it.price)} × {it.quantity}</div>
+                    <div className="text-[11px] text-slate-500 font-mono-num">{money(it.price)} × {it.quantity} {it.unit || "pcs"}</div>
                   </div>
                   <button onClick={() => removeItem(it.product_id, it.is_custom, idx)} className="text-slate-400 hover:text-rose-500"><Trash2 className="w-4 h-4" /></button>
                 </div>
@@ -384,11 +389,36 @@ export default function POS() {
             ))}
           </div>
 
+          {/* POS Summary with Discount Input */}
           <div className="border-t border-white/50 p-4 space-y-2 text-sm bg-white/50">
-            <div className="flex items-center justify-between"><span className="text-slate-500">Subtotal</span><span className="font-mono-num">{money(subtotal)}</span></div>
+            <div className="flex items-center justify-between">
+              <span className="text-slate-500">Subtotal</span>
+              <span className="font-mono-num">{money(subtotal)}</span>
+            </div>
+
             {TAX_RATE > 0 && (
-              <div className="flex items-center justify-between"><span className="text-slate-500">Tax</span><span className="font-mono-num">{money(tax)}</span></div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-500">Tax</span>
+                <span className="font-mono-num">{money(tax)}</span>
+              </div>
             )}
+
+            {/* Discount Field */}
+            <div className="flex items-center justify-between gap-2 py-1">
+              <span className="text-slate-500 flex items-center gap-1">
+                <Percent className="w-3.5 h-3.5 text-indigo-500" /> Discount (₹)
+              </span>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="0.00"
+                value={discount || ""}
+                onChange={(e) => setDiscount(Math.max(0, parseFloat(e.target.value) || 0))}
+                className="w-24 h-8 px-2 text-right font-mono-num text-sm rounded-lg border border-slate-300 bg-white outline-none focus:border-indigo-500"
+              />
+            </div>
+
             <div className="pt-2 flex items-end justify-between border-t border-dashed">
               <span className="label-cap">Grand Total</span>
               <span className="text-2xl font-mono-num font-extrabold">{money(total)}</span>
@@ -403,6 +433,7 @@ export default function POS() {
         </aside>
       </div>
 
+      {/* Custom Item Modal */}
       {showCustomModal && (
         <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="w-full max-w-md glass-strong p-6 space-y-4 max-h-[90vh] flex flex-col">
@@ -437,16 +468,47 @@ export default function POS() {
                 />
               </div>
 
-              <div>
-                <label className="text-xs text-slate-500 mb-1 block font-medium">Price</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  placeholder="0.00"
-                  value={customInput.price}
-                  onChange={(e) => setCustomInput({ ...customInput, price: e.target.value })}
-                  className="field font-mono-num"
-                />
+              <div className="grid grid-cols-3 gap-2">
+                <div>
+                  <label className="text-xs text-slate-500 mb-1 block font-medium">Qty</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    placeholder="1"
+                    value={customInput.quantity}
+                    onChange={(e) => setCustomInput({ ...customInput, quantity: e.target.value })}
+                    className="field font-mono-num"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs text-slate-500 mb-1 block font-medium">Unit</label>
+                  <select
+                    value={customInput.unit}
+                    onChange={(e) => setCustomInput({ ...customInput, unit: e.target.value })}
+                    className="field font-medium text-xs bg-white"
+                  >
+                    <option value="pcs">pcs</option>
+                    <option value="kg">kg</option>
+                    <option value="ltr">ltr</option>
+                    <option value="gm">gm</option>
+                    <option value="box">box</option>
+                    <option value="pkt">pkt</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-xs text-slate-500 mb-1 block font-medium">Price (₹)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    placeholder="0.00"
+                    value={customInput.price}
+                    onChange={(e) => setCustomInput({ ...customInput, price: e.target.value })}
+                    className="field font-mono-num"
+                  />
+                </div>
               </div>
 
               <button 
@@ -467,7 +529,9 @@ export default function POS() {
                   <div key={index} className="flex items-center justify-between p-3 bg-white/70 rounded-xl border border-slate-100 text-sm">
                     <div className="min-w-0 flex-1 pr-2">
                       <div className="font-bold text-slate-800 truncate">{index + 1}. {item.name}</div>
-                      <div className="text-xs font-mono-num text-indigo-600 font-semibold">{money(item.price)}</div>
+                      <div className="text-xs font-mono-num text-slate-500">
+                        {money(item.price)} × {item.quantity} {item.unit} = <span className="text-indigo-600 font-bold">{money(item.subtotal)}</span>
+                      </div>
                     </div>
                     <button 
                       type="button" 

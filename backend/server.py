@@ -220,6 +220,7 @@ class SaleItem(BaseModel):
     price: float
     quantity: float
     subtotal: float
+    unit: Optional[str] = "pcs"
 
 class OrderCreate(BaseModel):
     items: List[SaleItem]
@@ -744,7 +745,6 @@ async def add_wishlist(payload: WishlistItemIn, user: dict = Depends(get_current
 
 @api.get("/stats/summary")
 async def stats_summary():
-    # Dynamic calculations for financial stats & live inventories
     orders = await db.orders.find({}, {"_id": 0, "total": 1, "items": 1}).to_list(50000)
     total_revenue = sum(float(o.get("total", 0)) for o in orders)
 
@@ -755,7 +755,6 @@ async def stats_summary():
     )
     total_purchase_product = sum(float(p.get("closing_qty", 0)) for p in purchases)
 
-    # Calculate gross margin / total profit
     product_rates = {}
     for p in purchases:
         if p.get("product_name"):
@@ -770,7 +769,6 @@ async def stats_summary():
 
     total_profit = max(0.0, total_revenue - total_cogs)
 
-    # Stock quantity aggregator
     stock_pipeline = [{"$group": {"_id": None, "total_stock": {"$sum": "$stock"}}}]
     stock_res = await db.products.aggregate(stock_pipeline).to_list(1)
     total_inventory_product = stock_res[0]["total_stock"] if stock_res else 0
