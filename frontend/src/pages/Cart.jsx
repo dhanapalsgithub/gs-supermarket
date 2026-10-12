@@ -5,7 +5,7 @@ import { Plus, Minus, Trash2, ShoppingBag, ArrowRight } from "lucide-react";
 
 export default function Cart() {
   const { items, setQty, remove, updateQty, removeItem, subtotal } = useCart();
-  
+
   // Safe handlers to support any context function names
   const handleSetQty = setQty || updateQty;
   const handleRemove = remove || removeItem;
