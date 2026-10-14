@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { fetchOrders, updateOrderStatus, money } from "../lib/api";
 import { toast } from "sonner";
 import { 
@@ -22,12 +22,56 @@ export default function AdminOrders() {
   const [refreshing, setRefreshing] = useState(false);
   const [selectedReceipt, setSelectedReceipt] = useState(null); // Popup View-விற்காக
 
+  // Track previous order IDs to detect new incoming orders
+  const prevOrderIdsRef = useRef(null);
+
+  // Helper to play notification sound & voice
+  const triggerOrderNotification = (newOrder) => {
+    // 1. Play Beep/Chime Sound
+    try {
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(880, audioCtx.currentTime); // A5 note
+      osc.frequency.exponentialRampToValueAtTime(1760, audioCtx.currentTime + 0.3); // A6 note
+      gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.3);
+    } catch (e) {
+      console.warn("Audio Context sound failed", e);
+    }
+
+    // 2. Voice Alert Announcement (Tamil/English)
+    if ("speechSynthesis" in window) {
+      const receiptNo = newOrder?.receipt_no || "";
+      const text = `New order received! Receipt number ${receiptNo}`;
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = 0.9;
+      window.speechSynthesis.speak(utterance);
+    }
+  };
+
   const load = useCallback(async (isSilent = false) => {
     if (!isSilent) setLoading(true);
     setRefreshing(true);
     try {
       const data = await fetchOrders();
       if (Array.isArray(data)) {
+        // Check for new orders if not initial load
+        if (prevOrderIdsRef.current !== null) {
+          const newOrders = data.filter(o => !prevOrderIdsRef.current.has(o.id));
+          if (newOrders.length > 0) {
+            triggerOrderNotification(newOrders[0]);
+            toast.success(`New order received: ${newOrders[0].receipt_no || ''}`);
+          }
+        }
+        
+        // Update trackable order IDs set
+        prevOrderIdsRef.current = new Set(data.map(o => o.id));
         setOrders(data);
       }
     } catch { 
@@ -39,6 +83,14 @@ export default function AdminOrders() {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  // Auto-refresh every 10 seconds to check for new incoming orders
+  useEffect(() => {
+    const interval = setInterval(() => {
+      load(true);
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [load]);
 
   const setStatus = async (o, order_status) => {
     try { 
