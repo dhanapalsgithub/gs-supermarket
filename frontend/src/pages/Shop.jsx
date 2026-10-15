@@ -1,32 +1,88 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
-import { Package, Search, Heart, ShoppingCart, Filter, Megaphone, Tag } from "lucide-react";
+import { Package, Search, Heart, ShoppingCart, Filter, Tag, Sparkles, ShoppingBag } from "lucide-react";
 import { fetchProducts, fetchCategories, money, catTint, catLabel, addWishlist, fetchWishlist } from "../lib/api";
 import { useAuth, useCart } from "../context/AuthContext";
 
+// AdMob Banner Component
+function AdMobBanner() {
+  useEffect(() => {
+    if (window.Capacitor && window.Capacitor.isNativePlatform()) {
+      // Native AdMob Capacitor Logic
+    }
+  }, []);
+
+  return (
+    <div className="my-6 p-3 bg-slate-100 rounded-xl border border-slate-200 flex items-center justify-center min-h-[60px] text-center">
+      <div className="text-xs text-slate-400 uppercase tracking-widest font-semibold">
+        [ AdMob Banner - ca-app-pub-7889838257376198/1996537477 ]
+      </div>
+    </div>
+  );
+}
+// Updated UserOffersBanner with Merged Background & Family Grocery Image
 function UserOffersBanner() {
   const [offers, setOffers] = useState([]);
+
   useEffect(() => {
     fetch("/api/offers/active")
       .then((res) => res.json())
       .then((data) => { if (Array.isArray(data)) setOffers(data); })
       .catch(() => {});
   }, []);
+
   if (offers.length === 0) return null;
+
   return (
     <div className="mb-6 space-y-3">
       {offers.map((offer) => (
-        <div key={offer.id || offer.created_at} className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white p-4 rounded-2xl shadow-md flex items-start gap-3">
-          <div className="bg-white/20 p-2 rounded-xl mt-0.5"><Megaphone className="w-5 h-5 text-white animate-pulse" /></div>
-          <div className="flex-1">
-            <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-indigo-200 mb-1">
-              <Tag className="w-3.5 h-3.5" /> Special Offer
+        <div 
+          key={offer.id || offer.created_at} 
+          className="relative overflow-hidden bg-gradient-to-r from-amber-400 via-orange-400 to-amber-500 border-2 border-amber-300/80 p-3 rounded-2xl shadow-xl flex items-center gap-3.5"
+        >
+          {/* Left Side: Merged Family with Grocery Image (Smooth Blend into BG) */}
+          <div className="relative flex-shrink-0 w-16 h-16 rounded-xl overflow-hidden shadow-inner">
+            <img 
+              src="https://static.vecteezy.com/system/resources/previews/076/667/526/non_2x/indian-woman-in-traditional-saree-shopping-with-full-grocery-cart-isolated-on-transparent-background-free-png.png" 
+              alt="Happy Family Grocery Shopping" 
+              className="w-full h-full object-cover mix-blend-multiply opacity-95"
+            />
+            {/* Gradient Overlay for Smooth Merging */}
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-amber-400/80 pointer-events-none" />
+            <Sparkles className="w-4 h-4 text-amber-100 absolute -top-1 -right-1 animate-spin z-10" />
+          </div>
+
+          <div className="flex-1 overflow-hidden">
+            {/* Title Tag */}
+            <div className="flex items-center gap-1.5 text-xs font-black uppercase tracking-wider text-red-950 mb-1">
+              <Tag className="w-3.5 h-3.5 text-emerald-800" />
+              <span>குடும்ப சிறப்பு சலுகை (FAMILY SPECIAL OFFER)</span>
             </div>
-            <p className="text-sm font-medium leading-relaxed">{offer.message}</p>
+
+            {/* Running / Marquee Text Effect */}
+            <div className="relative w-full overflow-hidden whitespace-nowrap">
+              <div className="inline-block animate-marquee font-extrabold text-sm text-red-950">
+                <span className="inline-flex items-center gap-2">
+                  <ShoppingBag className="w-4 h-4 text-emerald-800 inline" />
+                  {offer.message}
+                </span>
+              </div>
+            </div>
           </div>
         </div>
       ))}
+
+      {/* Marquee Keyframes */}
+      <style>{`
+        @keyframes marquee {
+          0% { transform: translateX(100%); }
+          100% { transform: translateX(-100%); }
+        }
+        .animate-marquee {
+          animation: marquee 12s linear infinite;
+        }
+      `}</style>
     </div>
   );
 }
@@ -79,6 +135,8 @@ export default function Shop() {
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search groceries..." className="field field-lg pl-10" />
         </div>
       </header>
+
+      <AdMobBanner />
 
       <div className="flex gap-2 overflow-x-auto pb-3 mb-4">
         {["ALL", ...cats].map((c) => (

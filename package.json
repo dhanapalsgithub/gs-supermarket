@@ -1,5 +1,10 @@
 {
   "dependencies": {
+    "@capacitor-community/admob": "^8.2.1",
+    "@capacitor/android": "^8.5.3",
     "cors": "^2.8.6"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.5.3"
   }
 }
