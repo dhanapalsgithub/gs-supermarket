@@ -42,29 +42,36 @@ export default function Login() {
             <label className="block">
               <span className="label-cap">Email</span>
               <div className="relative mt-1">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 z-10 pointer-events-none" />
                 <input
-                  required type="email" value={email} onChange={(e) => setEmail(e.target.value)}
+                  required
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   data-testid="login-email"
                   placeholder="you@example.com"
-                  className="field pl-10"
+                  className="field !pl-12"
                 />
               </div>
             </label>
             <label className="block">
               <span className="label-cap">Password</span>
               <div className="relative mt-1">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 z-10 pointer-events-none" />
                 <input
-                  required type="password" value={password} onChange={(e) => setPassword(e.target.value)}
+                  required
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                   data-testid="login-password"
                   placeholder="••••••••"
-                  className="field pl-10"
+                  className="field !pl-12"
                 />
               </div>
             </label>
             <button
-              type="submit" disabled={busy}
+              type="submit"
+              disabled={busy}
               data-testid="login-submit"
               className="btn-primary w-full h-12 rounded-xl flex items-center justify-center gap-2"
             >
