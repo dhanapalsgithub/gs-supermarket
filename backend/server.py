@@ -641,11 +641,44 @@ async def create_order(payload: OrderCreate, request: Request):
             await db.products.update_one({"id": it.product_id}, {"$inc": {"stock": -it.quantity}})
         
     return {k: v for k, v in doc.items() if k != "_id"}
-
 @api.get("/orders")
-async def list_orders(request: Request, limit: int = 200):
-    return await db.orders.find({}, {"_id": 0}).sort("created_at", -1).to_list(limit)
+async def list_orders(
+    request: Request, 
+    mine: bool = False, 
+    limit: int = 200
+):
+    user = None
+    auth = request.headers.get("Authorization", "")
+    token = auth[7:] if auth.startswith("Bearer ") else None
+    
+    if token:
+        try:
+            payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALG])
+            user = await db.users.find_one({"id": payload["sub"]}, {"_id": 0, "password_hash": 0})
+        except Exception:
+            pass
 
+    query = {}
+    
+    # Filter by user if "mine=true" is requested
+    if mine:
+        if not user:
+            raise HTTPException(status_code=401, detail="Authentication required to view your orders")
+        
+        # Match either user_id OR user's phone / email for online orders
+        user_id = user.get("id")
+        user_phone = user.get("phone")
+        user_email = user.get("email")
+
+        or_conditions = [{"user_id": user_id}]
+        if user_phone:
+            or_conditions.append({"customer_phone": user_phone})
+        if user_email:
+            or_conditions.append({"customer_email": user_email})
+
+        query = {"$or": or_conditions}
+
+    return await db.orders.find(query, {"_id": 0}).sort("created_at", -1).to_list(limit)
 # --- Offer Update & Delete Endpoints ---
 @api.put("/admin/offers/{oid}")
 async def update_offer(oid: str, payload: OfferBroadcastInput, _: dict = Depends(get_current_user)):
